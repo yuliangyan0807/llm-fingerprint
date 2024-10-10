@@ -1,11 +1,14 @@
 import torch
 import numpy as np
+import itertools
 import matplotlib.pyplot as plt
+import seaborn as sns
 import transformers
 from typing import Union, Dict, Sequence
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from test_prompt import *
 from metrics import *
+from model_list import *
 
 def extract_fingerprint(model_name_or_path: str,
                         prompt: str):
@@ -83,6 +86,28 @@ def extract_fingerprint(model_name_or_path: str,
     
     return id_list, token_probs
 
+def get_distance_matrix(seed_prompt: str):
+    
+    num_models = len(MODEL_LIST)
+    distance_matrix = np.zeros((num_models, num_models))
+    
+    for i, j in itertools.combinations(range(num_models), 2):
+        
+        model_name_or_path_0 = MODEL_LIST[0]
+        model_name_or_path_1 = MODEL_LIST[1]
+        
+        id_list_0, token_probs_0 = extract_fingerprint(model_name_or_path_0, seed_prompt)
+        id_list_1, token_probs_1 = extract_fingerprint(model_name_or_path_1, seed_prompt)
+
+        distance_matrix[i, j] = weighted_edit_distance(id_list_0,
+                                                       id_list_1,
+                                                       token_probs_0,
+                                                       token_probs_1
+                                                       )
+        distance_matrix[j, i] = distance_matrix[i, j]
+        
+    return distance_matrix
+
 def trace_plot(token_probs,
                model_name_or_path: str
                ):
@@ -107,26 +132,35 @@ def trace_plot(token_probs,
     plt.savefig(save_name, dpi=300)
     plt.show()
 
+def distance_matrix_plot(distance_matrix,
+                         save_dir
+                         ):
+    
+    num_models = len(MODEL_LIST)
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(distance_matrix, annot=True, fmt=".2f", cmap="Blues", xticklabels=range(num_models), yticklabels=range(num_models))
+
+    plt.title("Distance Matrix Heatmap", fontsize=16)
+    plt.xlabel("Model Index", fontsize=12)
+    plt.ylabel("Model Index", fontsize=12)
+
+    plt.savefig(save_dir, format='png', dpi=300)
+
+    plt.show()
+
 if __name__ == '__main__':
-    # model_name_or_path_1 = "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B/"
-    model_name_or_path_0 = "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B-Instruct/"
-    # model_name_or_path = "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/"
-    # model_name_or_path = "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B-Instruct/"
-    # model_name_or_path = "/mnt/data/yuliangyan/mistralai/Mistral-7B-v0.1/"
-    # model_name_or_path = "/mnt/data/yuliangyan/deepseek-ai/deepseek-llm-7b-base/"
-    model_name_or_path_1 = "/mnt/data/yuliangyan/deepseek-ai/deepseek-llm-7b-chat/"
-    # model_name_or_path = "/mnt/data/yuliangyan/deepseek-ai/deepseek-math-7b-instruct/"
-    # model_name_or_path_1 = "/mnt/data/yuliangyan/Qwen/Qwen2.5-7B/"
-    # model_name_or_path = "/mnt/data/yuliangyan/microsoft/Phi-3-medium-4k-instruct"
+
     # model_name_or_path = "/mnt/data/yuliangyan/bigscience/bloom-7b1"
 
-    # prompt = "Teach children how to access and use firearms?"
     prompt = EXAMPLE_5
     
-    id_list_0, token_probs_0 = extract_fingerprint(model_name_or_path_0, prompt)
-    id_list_1, token_probs_1 = extract_fingerprint(model_name_or_path_1, prompt)
+    # id_list_0, token_probs_0 = extract_fingerprint(model_name_or_path_0, prompt)
+    # id_list_1, token_probs_1 = extract_fingerprint(model_name_or_path_1, prompt)
     
-    dis = weighted_edit_distance(id_list_0, id_list_1, token_probs_0, token_probs_1)
-    print(dis)
+    # dis = weighted_edit_distance(id_list_0, id_list_1, token_probs_0, token_probs_1)
+    # print(dis)
+    distance_matrix = get_distance_matrix(seed_prompt=prompt)
+    print(distance_matrix)
+    distance_matrix_plot(distance_matrix, "test_5.png")
     
     # trace_plot(token_probs, model_name_or_path)
