@@ -1,23 +1,47 @@
 import torch
 import numpy as np
 import itertools
+from tqdm import tqdm
+from typing import Union, Dict, Sequence
+
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 import transformers
-from typing import Union, Dict, Sequence
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import get_peft_config, get_peft_model, LoraConfig, TaskType, PeftModel, PeftConfig
+
 from test_prompt import *
 from metrics import *
 from model_list import *
 
+
 def extract_fingerprint(model_name_or_path: str,
-                        prompt: str):
-    model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
-                                                return_dict=True, 
-                                                device_map="auto",
-                                                output_hidden_states=True
-                                                )
-    tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+                        prompt: str,
+                        fine_tuned=False):
+    if "test" in model_name_or_path:
+        fine_tuned = True
+    if not fine_tuned:
+        model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
+                                                    return_dict=True, 
+                                                    device_map="auto",
+                                                    output_hidden_states=True
+                                                    )
+        tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+    # load lora model
+    else:
+        config = PeftConfig.from_pretrained(model_name_or_path)
+        model = AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
+                                                    return_dict=True, 
+                                                    device_map="auto",
+                                                    output_hidden_states=True
+                                                    )
+        peft_model = PeftModel.from_pretrained(model, model_name_or_path, 
+                                                    return_dict=True, 
+                                                    device_map="auto",
+                                                    output_hidden_states=True
+                                                    )
+        tokenizer = AutoTokenizer.from_pretrained(config.base_model_name_or_path)
     tokenizer.pad_token = tokenizer.eos_token
 
     # input_ids  size[1,12]
@@ -53,6 +77,8 @@ def extract_fingerprint(model_name_or_path: str,
     with torch.no_grad():
         # {sequences: , scores: , hidden_states: , attentions: }
         output = model.generate(**generation_input)
+    
+    print("Current model: {}".format(model_name_or_path))
 
     gen_sequences = output.sequences[:, input_ids.shape[-1]:]
     decoded_output = [tokenizer.decode(ids) for ids in gen_sequences]
@@ -81,29 +107,43 @@ def extract_fingerprint(model_name_or_path: str,
         index.append(i)
 
     id_list = gen_sequences.tolist()[0]
-    for token_id, prob in zip(id_list, token_probs):
-        print(f"{tokenizer.decode(token_id)}: {prob}")
     
-    return id_list, token_probs
+    # for token_id, prob in zip(id_list, token_probs):
+    #     print(f"{tokenizer.decode(token_id)}: {prob}")
+    
+    tokens = [tokenizer.decode(token_id) for token_id in id_list]
+    print("tokens: {}".format(tokens))
+    
+    # return id_list, token_probs
+    return tokens, token_probs
+    
 
 def get_distance_matrix(seed_prompt: str):
     
     num_models = len(MODEL_LIST)
     distance_matrix = np.zeros((num_models, num_models))
     
+    fingerprint = []
+    for i in range(num_models):
+        id_list, token_probs = extract_fingerprint(MODEL_LIST[i], seed_prompt)
+        fingerprint.append((id_list, token_probs))
+        # print(MODEL_LIST[i])
+    
     for i, j in itertools.combinations(range(num_models), 2):
         
-        model_name_or_path_0 = MODEL_LIST[0]
-        model_name_or_path_1 = MODEL_LIST[1]
+        # model_name_or_path_0 = MODEL_LIST[i]
+        # model_name_or_path_1 = MODEL_LIST[j]
         
-        id_list_0, token_probs_0 = extract_fingerprint(model_name_or_path_0, seed_prompt)
-        id_list_1, token_probs_1 = extract_fingerprint(model_name_or_path_1, seed_prompt)
+        id_list_0, token_probs_0 = fingerprint[i][0], fingerprint[i][1]
+        id_list_1, token_probs_1 = fingerprint[j][0], fingerprint[j][1]
 
-        distance_matrix[i, j] = weighted_edit_distance(id_list_0,
-                                                       id_list_1,
-                                                       token_probs_0,
-                                                       token_probs_1
-                                                       )
+        # distance_matrix[i, j] = weighted_edit_distance(id_list_0,
+        #                                                id_list_1,
+        #                                                token_probs_0,
+        #                                                token_probs_1
+        #                                                )
+        distance_matrix[i, j] = edit_distance(id_list_0,
+                                              id_list_1)
         distance_matrix[j, i] = distance_matrix[i, j]
         
     return distance_matrix
@@ -138,7 +178,7 @@ def distance_matrix_plot(distance_matrix,
     
     num_models = len(MODEL_LIST)
     plt.figure(figsize=(10, 8))
-    sns.heatmap(distance_matrix, annot=True, fmt=".2f", cmap="Blues", xticklabels=range(num_models), yticklabels=range(num_models))
+    sns.heatmap(distance_matrix, annot=True, fmt=".2f", cmap="Blues", xticklabels=MODEL_LIST, yticklabels=MODEL_LIST)
 
     plt.title("Distance Matrix Heatmap", fontsize=16)
     plt.xlabel("Model Index", fontsize=12)
@@ -151,16 +191,20 @@ def distance_matrix_plot(distance_matrix,
 if __name__ == '__main__':
 
     # model_name_or_path = "/mnt/data/yuliangyan/bigscience/bloom-7b1"
+    # model_name_or_path_0 = "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/"
+    # model_name_or_path_1 = "/home/yuliangyan/Code/llm-fingerprinting/stanford_alpaca/saved_models_llama3_8_test"
 
     prompt = EXAMPLE_5
     
     # id_list_0, token_probs_0 = extract_fingerprint(model_name_or_path_0, prompt)
-    # id_list_1, token_probs_1 = extract_fingerprint(model_name_or_path_1, prompt)
+    # id_list_1, token_probs_1 = extract_fingerprint(model_name_or_path_1, prompt, fine_tuned=True)
     
     # dis = weighted_edit_distance(id_list_0, id_list_1, token_probs_0, token_probs_1)
     # print(dis)
+    
+    
     distance_matrix = get_distance_matrix(seed_prompt=prompt)
     print(distance_matrix)
-    distance_matrix_plot(distance_matrix, "test_5.png")
+    distance_matrix_plot(distance_matrix, "test_5_w_o.png")
     
     # trace_plot(token_probs, model_name_or_path)
