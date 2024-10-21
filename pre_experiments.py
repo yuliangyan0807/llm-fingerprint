@@ -9,17 +9,23 @@ import seaborn as sns
 
 import transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from peft import get_peft_config, get_peft_model, LoraConfig, TaskType, PeftModel, PeftConfig
+from peft import PeftModel, PeftConfig
 
 from test_prompt import *
 from metrics import *
 from model_list import *
 
+import logging
+logging.basicConfig(level=logging.DEBUG,
+                    filename='example10.log',
+                    filemode='a',
+                    format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s'
+                    )
 
 def extract_fingerprint(model_name_or_path: str,
                         prompt: str,
                         fine_tuned=False):
-    if "test" in model_name_or_path:
+    if "test" in model_name_or_path in model_name_or_path:
         fine_tuned = True
     if not fine_tuned:
         model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
@@ -42,7 +48,8 @@ def extract_fingerprint(model_name_or_path: str,
                                                     output_hidden_states=True
                                                     )
         tokenizer = AutoTokenizer.from_pretrained(config.base_model_name_or_path)
-    tokenizer.pad_token = tokenizer.eos_token
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
     # input_ids  size[1,12]
     # prompt = "please prove that: $\\lim_{n\to\\infty} \\sin{n}$ does not exist."
@@ -68,10 +75,7 @@ def extract_fingerprint(model_name_or_path: str,
         "top_p":0.9,
         "temperature":0.45,
         "repetition_penalty":1.4,
-        # "eos_token_id":tokenizer.eos_token_id,
-        # "bos_token_id":tokenizer.bos_token_id,
         "pad_token_id":tokenizer.eos_token_id,
-
     }
 
     with torch.no_grad():
@@ -83,6 +87,8 @@ def extract_fingerprint(model_name_or_path: str,
     gen_sequences = output.sequences[:, input_ids.shape[-1]:]
     decoded_output = [tokenizer.decode(ids) for ids in gen_sequences]
     print("Generated content is: {}".format(decoded_output))
+    logging.info("Current model: {}".format(model_name_or_path))
+    logging.info("Generated content is: {}".format(decoded_output))
     print("###################################################")
     
     # batch_decoded_output = tokenizer.batch_decode(output.sequences)[0]
@@ -113,40 +119,58 @@ def extract_fingerprint(model_name_or_path: str,
     
     tokens = [tokenizer.decode(token_id) for token_id in id_list]
     print("tokens: {}".format(tokens))
+    logging.info("Generated tokens: {}".format(tokens))
     
     # return id_list, token_probs
-    return tokens, token_probs
+    return tokens, token_probs, decoded_output[0]
     
 
 def get_distance_matrix(seed_prompt: str):
     
     num_models = len(MODEL_LIST)
-    distance_matrix = np.zeros((num_models, num_models))
+    edit_distance_matrix = np.zeros((num_models, num_models))
+    semantic_simlarity_matrix = np.zeros((num_models, num_models))
+    perplexity_distance_matrix = np.zeros(num_models, num_models)
     
     fingerprint = []
+    texts = []
+    perplexity = []
     for i in range(num_models):
-        id_list, token_probs = extract_fingerprint(MODEL_LIST[i], seed_prompt)
+        id_list, token_probs, text = extract_fingerprint(MODEL_LIST[i], seed_prompt)
         fingerprint.append((id_list, token_probs))
+        texts.append(text)
+        perplexity.append(get_perplexity(text))
         # print(MODEL_LIST[i])
     
     for i, j in itertools.combinations(range(num_models), 2):
         
-        # model_name_or_path_0 = MODEL_LIST[i]
-        # model_name_or_path_1 = MODEL_LIST[j]
-        
+        # compute edit distance
         id_list_0, token_probs_0 = fingerprint[i][0], fingerprint[i][1]
         id_list_1, token_probs_1 = fingerprint[j][0], fingerprint[j][1]
 
-        # distance_matrix[i, j] = weighted_edit_distance(id_list_0,
-        #                                                id_list_1,
-        #                                                token_probs_0,
-        #                                                token_probs_1
-        #                                                )
-        distance_matrix[i, j] = edit_distance(id_list_0,
-                                              id_list_1)
-        distance_matrix[j, i] = distance_matrix[i, j]
+        edit_distance_matrix[i, j] = weighted_edit_distance(id_list_0,
+                                                       id_list_1,
+                                                       token_probs_0,
+                                                       token_probs_1
+                                                       )
+        # distance_matrix[i, j] = edit_distance(id_list_0,
+        #                                       id_list_1)
+        edit_distance_matrix[j, i] = edit_distance_matrix[i, j]
         
-    return distance_matrix
+        # compute semantic similarity
+        text_0 = texts[i]
+        text_1 = text[j]
+        semantic_simlarity_matrix[i][j] = get_semantic_similarity_with_bert_score(text_0, text_1)
+        semantic_simlarity_matrix[j][i] = semantic_simlarity_matrix[i][j]
+        
+        # compute perplexity distance
+        perplexity_distance_matrix[i][j] = abs(perplexity[i] - perplexity[j])
+        perplexity_distance_matrix[j][i] = perplexity_distance_matrix[i][j]
+        
+    return {"edit_distance_matrix": edit_distance_matrix,
+            "semantic_simlarity_matrix": semantic_simlarity_matrix,
+            "perplexity_distance_matrix": perplexity_distance_matrix
+            }
 
 def trace_plot(token_probs,
                model_name_or_path: str
@@ -172,20 +196,37 @@ def trace_plot(token_probs,
     plt.savefig(save_name, dpi=300)
     plt.show()
 
-def distance_matrix_plot(distance_matrix,
+def distance_matrix_plot(result_dict,
                          save_dir
                          ):
     
     num_models = len(MODEL_LIST)
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(distance_matrix, annot=True, fmt=".2f", cmap="Blues", xticklabels=MODEL_LIST, yticklabels=MODEL_LIST)
+    # plt.figure(figsize=(10, 8))
+    # sns.heatmap(distance_matrix, annot=True, fmt=".2f", cmap="Blues", xticklabels=MODEL_LABEL, yticklabels=MODEL_LABEL)
 
-    plt.title("Distance Matrix Heatmap", fontsize=16)
-    plt.xlabel("Model Index", fontsize=12)
-    plt.ylabel("Model Index", fontsize=12)
+    # plt.title("Distance Matrix Heatmap", fontsize=16)
+    # plt.xlabel("Model Index", fontsize=12)
+    # plt.ylabel("Model Index", fontsize=12)
 
+    # plt.savefig(save_dir, format='png', dpi=300)
+
+    # plt.show()
+    fig, axs = plt.subplots(1, 3, figsize=(18, 6))
+    
+    sns.heatmap(result_dict['edit_distance_matrix'], ax=axs[0], cmap="coolwarm", cbar=True,
+                xticklabels=MODEL_LABEL, yticklabels=MODEL_LABEL)
+    axs[0].set_title("Edit Distance Matrix")
+    
+    sns.heatmap(result_dict['semantic_simlarity_matrix'], ax=axs[1], cmap="coolwarm", cbar=True,
+                xticklabels=MODEL_LABEL, yticklabels=MODEL_LABEL)
+    axs[1].set_title("Semantic Simlarity Matrix")
+    
+    sns.heatmap(result_dict['perplexity_distance_matrix'], ax=axs[2], cmap="coolwarm", cbar=True,
+                xticklabels=MODEL_LABEL, yticklabels=MODEL_LABEL)
+    axs[1].set_title("Perplexity Distance Matrix")
+    
+    plt.tight_layout()
     plt.savefig(save_dir, format='png', dpi=300)
-
     plt.show()
 
 if __name__ == '__main__':
@@ -194,7 +235,7 @@ if __name__ == '__main__':
     # model_name_or_path_0 = "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/"
     # model_name_or_path_1 = "/home/yuliangyan/Code/llm-fingerprinting/stanford_alpaca/saved_models_llama3_8_test"
 
-    prompt = EXAMPLE_5
+    prompt = EXAMPLE_10
     
     # id_list_0, token_probs_0 = extract_fingerprint(model_name_or_path_0, prompt)
     # id_list_1, token_probs_1 = extract_fingerprint(model_name_or_path_1, prompt, fine_tuned=True)
@@ -205,6 +246,6 @@ if __name__ == '__main__':
     
     distance_matrix = get_distance_matrix(seed_prompt=prompt)
     print(distance_matrix)
-    distance_matrix_plot(distance_matrix, "test_5_w_o.png")
+    distance_matrix_plot(distance_matrix, "test_10.png")
     
     # trace_plot(token_probs, model_name_or_path)

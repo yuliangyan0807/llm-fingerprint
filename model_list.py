@@ -2,6 +2,7 @@ MODEL_LIST = ["/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/",
               "/home/yuliangyan/Code/llm-fingerprinting/stanford_alpaca/saved_models_llama3_8_test",
               "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B-Instruct/",
               "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B/",
+              "/home/yuliangyan/Code/llm-fingerprinting/stanford_alpaca/saved_models_llama3_1_8_test",
               "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B-Instruct/",
               "/mnt/data/yuliangyan/mistralai/Mistral-7B-v0.1/",
               "/home/yuliangyan/Code/llm-fingerprinting/stanford_alpaca/saved_models_mistral_test",
@@ -13,6 +14,19 @@ MODEL_LIST = ["/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/",
               "/mnt/data/yuliangyan/microsoft/Phi-3-medium-4k-instruct",
               ]
 
-
+MODEL_LABEL = ["llama3",
+               "llama3-ft",
+               "llma3-instruct",
+               "llama3.1",
+               "llama3.1-ft",
+               "llama3.1-instruct",
+               "mistral",
+               "mistral-ft",
+               "deepseek",
+               "deepseek-ft",
+               "deepseek-chat",
+               "deepseek-math",
+               "qwen2.5",
+               "phi3"]
 # TODO
 # gemmma-2

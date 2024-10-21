@@ -65,7 +65,7 @@ class TrainingArguments(transformers.TrainingArguments):
         default="constant_with_warmup"
     )  # "constant", "constant_with_warmup", "cosine", "cosine_with_restarts", "linear"
     model_max_length: int = field(
-        default=2048,
+        default=1024,
         metadata={
             "help": "Maximum sequence length. Sequences will be right padded (and possibly truncated)."
         },
@@ -129,6 +129,8 @@ class SupervisedDataset(Dataset):
         logging.warning("Loading data: {}".format(data_path))
         # data_list = utils.jload(data_path)
         data_list = load_dataset(data_path)['train']
+        random_indices = random.sample(range(len(data_list)), 1000)
+        data_list = data_list.select(random_indices)
 
         # Preprocess Data
         logging.warning("Processing data")
@@ -235,20 +237,21 @@ def train():
         )
     
     # lora config
-    lora_modules = [
-        "q_proj",
-        "k_proj",
-        "v_proj",
-        "o_proj",
-        "up_proj",
-        "gate_proj",
-        "down_proj",
-    ]
+    # lora_modules = [
+    #     "q_proj",
+    #     "k_proj",
+    #     "v_proj",
+    #     "o_proj",
+    #     "up_proj",
+    #     "gate_proj",
+    #     "down_proj",
+    # ]
+    # lora_modules = "all-linear"
     
     lora_config = LoraConfig(
         r=training_args.lora_rank,
         lora_alpha=training_args.lora_alpha,
-        target_modules=lora_modules,
+        # target_modules=lora_modules,
         lora_dropout=0.1,
         bias="none",
         task_type="CAUSAL_LM",

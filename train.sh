@@ -2,8 +2,9 @@ torchrun --nproc_per_node=4  finetuning.py \
     --model_name_or_path "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B/" \
     --data_path "tatsu-lab/alpaca" \
     --bf16 True \
-    --output_dir "./llama3_1_8_ft" \
-    --num_train_epochs 1 \
+    --output_dir "./llama3_1_8_ft_tiny" \
+    --lora_rank 4 \
+    --num_train_epochs 3 \
     --per_device_train_batch_size 4 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 8 \
