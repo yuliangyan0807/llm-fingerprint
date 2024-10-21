@@ -16,10 +16,10 @@ from metrics import *
 from model_list import *
 
 import logging
-logging.basicConfig(level=logging.DEBUG,
-                    filename='example10.log',
+logging.basicConfig(level=logging.INFO,
+                    filename='example9.log',
                     filemode='a',
-                    format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s'
+                    format='%(message)s'
                     )
 
 def extract_fingerprint(model_name_or_path: str,
@@ -130,7 +130,7 @@ def get_distance_matrix(seed_prompt: str):
     num_models = len(MODEL_LIST)
     edit_distance_matrix = np.zeros((num_models, num_models))
     semantic_simlarity_matrix = np.zeros((num_models, num_models))
-    perplexity_distance_matrix = np.zeros(num_models, num_models)
+    perplexity_distance_matrix = np.zeros((num_models, num_models))
     
     fingerprint = []
     texts = []
@@ -159,7 +159,7 @@ def get_distance_matrix(seed_prompt: str):
         
         # compute semantic similarity
         text_0 = texts[i]
-        text_1 = text[j]
+        text_1 = texts[j]
         semantic_simlarity_matrix[i][j] = get_semantic_similarity_with_bert_score(text_0, text_1)
         semantic_simlarity_matrix[j][i] = semantic_simlarity_matrix[i][j]
         
@@ -201,29 +201,20 @@ def distance_matrix_plot(result_dict,
                          ):
     
     num_models = len(MODEL_LIST)
-    # plt.figure(figsize=(10, 8))
-    # sns.heatmap(distance_matrix, annot=True, fmt=".2f", cmap="Blues", xticklabels=MODEL_LABEL, yticklabels=MODEL_LABEL)
-
-    # plt.title("Distance Matrix Heatmap", fontsize=16)
-    # plt.xlabel("Model Index", fontsize=12)
-    # plt.ylabel("Model Index", fontsize=12)
-
-    # plt.savefig(save_dir, format='png', dpi=300)
-
-    # plt.show()
-    fig, axs = plt.subplots(1, 3, figsize=(18, 6))
     
-    sns.heatmap(result_dict['edit_distance_matrix'], ax=axs[0], cmap="coolwarm", cbar=True,
+    fig, axs = plt.subplots(1, 3, figsize=(48, 16))
+    
+    sns.heatmap(result_dict['edit_distance_matrix'], annot=True, fmt=".2f", ax=axs[0], cmap="coolwarm", cbar=True,
                 xticklabels=MODEL_LABEL, yticklabels=MODEL_LABEL)
     axs[0].set_title("Edit Distance Matrix")
     
-    sns.heatmap(result_dict['semantic_simlarity_matrix'], ax=axs[1], cmap="coolwarm", cbar=True,
+    sns.heatmap(result_dict['semantic_simlarity_matrix'], annot=True, fmt=".2f", ax=axs[1], cmap="coolwarm", cbar=True,
                 xticklabels=MODEL_LABEL, yticklabels=MODEL_LABEL)
     axs[1].set_title("Semantic Simlarity Matrix")
     
-    sns.heatmap(result_dict['perplexity_distance_matrix'], ax=axs[2], cmap="coolwarm", cbar=True,
+    sns.heatmap(result_dict['perplexity_distance_matrix'], annot=True, fmt=".2f", ax=axs[2], cmap="coolwarm", cbar=True,
                 xticklabels=MODEL_LABEL, yticklabels=MODEL_LABEL)
-    axs[1].set_title("Perplexity Distance Matrix")
+    axs[2].set_title("Perplexity Distance Matrix")
     
     plt.tight_layout()
     plt.savefig(save_dir, format='png', dpi=300)
@@ -231,11 +222,8 @@ def distance_matrix_plot(result_dict,
 
 if __name__ == '__main__':
 
-    # model_name_or_path = "/mnt/data/yuliangyan/bigscience/bloom-7b1"
-    # model_name_or_path_0 = "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/"
-    # model_name_or_path_1 = "/home/yuliangyan/Code/llm-fingerprinting/stanford_alpaca/saved_models_llama3_8_test"
-
-    prompt = EXAMPLE_10
+    prompt = EXAMPLE_9
+    # prompt = "After negotiating for the price of a phone, Karsyn bought a phone at 20% of the initial price. If the phone's initial price was $600, calculate how much she paid after negotiating."
     
     # id_list_0, token_probs_0 = extract_fingerprint(model_name_or_path_0, prompt)
     # id_list_1, token_probs_1 = extract_fingerprint(model_name_or_path_1, prompt, fine_tuned=True)
@@ -243,9 +231,8 @@ if __name__ == '__main__':
     # dis = weighted_edit_distance(id_list_0, id_list_1, token_probs_0, token_probs_1)
     # print(dis)
     
-    
-    distance_matrix = get_distance_matrix(seed_prompt=prompt)
-    print(distance_matrix)
-    distance_matrix_plot(distance_matrix, "test_10.png")
+    result_dict = get_distance_matrix(seed_prompt=prompt)
+    # print(distance_matrix)
+    distance_matrix_plot(result_dict, "test_9.png")
     
     # trace_plot(token_probs, model_name_or_path)

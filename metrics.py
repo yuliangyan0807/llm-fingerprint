@@ -47,11 +47,11 @@ def get_semantic_similarity_with_bert_score(text_0, text_1):
     predictions = [text_1]
     references = [text_0]
     
-    results = bert_score.compute(predictions, 
-                                 references,
+    results = bert_score.compute(predictions=predictions,
+                                 references=references,
                                  lang='en')
     
-    return results['f1']
+    return results['f1'][0]
 
 # perplexity
 def get_perplexity(text):
