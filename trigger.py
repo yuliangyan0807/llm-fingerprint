@@ -26,11 +26,15 @@ def construct_seed_trigger_set(k: int):
         subset = random.choices(dataset, k=k)
         for prompt in tqdm(subset):
             data.append(prompt)
-    data = {"prompt": data}
+    labels = []
+    for i in range(len(DATASET)):
+        labels += [i] * k
+    data = {"prompt": data,
+            "label": labels}
     data = Dataset.from_dict(data)
     data.save_to_disk("seed_trigger_set")
 
 if __name__ == "__main__":
     # construct_seed_trigger_set(100)
-    trigger_set = load_from_disk("seed_trigger_set")
-    print(trigger_set[110])
+    trigger_set = load_from_disk("data/seed_trigger_set")
+    print(trigger_set[310])

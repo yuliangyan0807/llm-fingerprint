@@ -1,1 +1,5 @@
 **/__pycache__/
+**/logs
+**/stanford_alpaca
+**/llama3_1_8_ft_tiny
+**/figs
