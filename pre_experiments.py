@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO,
 def extract_fingerprint(model_name_or_path: str,
                         prompt: str,
                         fine_tuned=False):
-    if "test" in model_name_or_path in model_name_or_path:
+    if "test" in model_name_or_path:
         fine_tuned = True
     if not fine_tuned:
         model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
@@ -42,7 +42,7 @@ def extract_fingerprint(model_name_or_path: str,
                                                     device_map="auto",
                                                     output_hidden_states=True
                                                     )
-        peft_model = PeftModel.from_pretrained(model, model_name_or_path, 
+        model = PeftModel.from_pretrained(model, model_name_or_path, 
                                                     return_dict=True, 
                                                     device_map="auto",
                                                     output_hidden_states=True

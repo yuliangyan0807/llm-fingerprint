@@ -3,6 +3,8 @@ from transformers import set_seed
 from datasets import load_dataset, Dataset, load_from_disk
 from transformers import set_seed
 from tqdm import tqdm
+from model_list import *
+from generation import *
 
 # Math dataset
 GSM8K = load_dataset("openai/gsm8k", "main")['train']['question'] # question
@@ -33,8 +35,40 @@ def construct_seed_trigger_set(k: int):
             "label": labels}
     data = Dataset.from_dict(data)
     data.save_to_disk("seed_trigger_set")
+    
+def construct_classifier_dataset(seed_dataset,
+                                 sample_number_per_step: int,):
+    model_labels = []
+    outputs = []
+    model_numbers = len(MODEL_LIST)
+    
+    for i in tqdm(range(len(seed_dataset))):
+        data = seed_dataset[i]
+        prompt = data['prompt']
+        indices = random.sample(range(model_numbers), k=sample_number_per_step)
+        for index in indices:
+            model_name_or_path = MODEL_LIST[index]
+            fine_tuned = False
+            if "test" in model_name_or_path:
+                fine_tuned = True
+            try:
+                output = generation(model_name_or_path=model_name_or_path,
+                                    prompt=prompt,
+                                    fine_tuned=fine_tuned)
+                outputs.append(output)
+                model_labels.append(index)
+            except RuntimeError as e:
+                pass
+            
+    
+    data = {'output': outputs,
+            "model_label": model_labels}
+    data = Dataset.from_dict(data)
+    data.save_to_disk("classifier_dataset")
+        
 
 if __name__ == "__main__":
     # construct_seed_trigger_set(100)
     trigger_set = load_from_disk("data/seed_trigger_set")
-    print(trigger_set[310])
+    # print(trigger_set[310])
+    construct_classifier_dataset(trigger_set, sample_number_per_step=5)
