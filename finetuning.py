@@ -129,8 +129,10 @@ class SupervisedDataset(Dataset):
         logging.warning("Loading data: {}".format(data_path))
         # data_list = utils.jload(data_path)
         data_list = load_dataset(data_path)['train']
-        random_indices = random.sample(range(len(data_list)), 1000)
-        data_list = data_list.select(random_indices)
+        
+        # if select the subset of the raw dataset
+        # random_indices = random.sample(range(len(data_list)), 200)
+        # data_list = data_list.select(random_indices)
 
         # Preprocess Data
         logging.warning("Processing data")

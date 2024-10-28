@@ -1,5 +1,4 @@
 **/__pycache__/
 **/logs
-**/stanford_alpaca
-**/llama3_1_8_ft_tiny_test
 **/figs
+**/instruction_tuning_models

@@ -1,8 +1,8 @@
 torchrun --nproc_per_node=4  finetuning.py \
-    --model_name_or_path "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B/" \
+    --model_name_or_path "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B-Instruct/" \
     --data_path "tatsu-lab/alpaca" \
     --bf16 True \
-    --output_dir "./llama3_1_8_ft_tiny" \
+    --output_dir "./instruction_tuning_models/llama3-instruct-ft" \
     --lora_rank 4 \
     --num_train_epochs 3 \
     --per_device_train_batch_size 4 \

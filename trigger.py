@@ -56,7 +56,7 @@ def construct_classifier_dataset(seed_dataset,
                                     prompt=prompt,
                                     fine_tuned=fine_tuned)
                 outputs.append(output)
-                model_labels.append(index)
+                model_labels.append(LABEL[model_name_or_path])
             except RuntimeError as e:
                 pass
             
@@ -71,4 +71,4 @@ if __name__ == "__main__":
     # construct_seed_trigger_set(100)
     trigger_set = load_from_disk("data/seed_trigger_set")
     # print(trigger_set[310])
-    construct_classifier_dataset(trigger_set, sample_number_per_step=5)
+    construct_classifier_dataset(trigger_set, sample_number_per_step=2)

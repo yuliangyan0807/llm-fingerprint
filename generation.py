@@ -4,6 +4,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 def generation(model_name_or_path: str,
                         prompt: str,
+                        temperature: float=1.0 ,
                         fine_tuned=False):
     
     if "test" in model_name_or_path in model_name_or_path:
@@ -51,10 +52,10 @@ def generation(model_name_or_path: str,
         "output_scores":True,
         #"output_hidden_states":True,
         "max_new_tokens":256,
-        "do_sample":True,
-        # "top_k":50,
-        "top_p":0.9,
-        "temperature":0.45,
+        # "do_sample":True,
+        # "top_k":3,
+        # "top_p":0.9,
+        "temperature": temperature,
         "repetition_penalty":1.4,
         "pad_token_id":tokenizer.eos_token_id,
     }

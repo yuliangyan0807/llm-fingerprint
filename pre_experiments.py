@@ -17,7 +17,7 @@ from model_list import *
 
 import logging
 logging.basicConfig(level=logging.INFO,
-                    filename='example9.log',
+                    filename='example3.log',
                     filemode='a',
                     format='%(message)s'
                     )
@@ -70,10 +70,10 @@ def extract_fingerprint(model_name_or_path: str,
         "output_scores":True,
         #"output_hidden_states":True,
         "max_new_tokens":256,
-        "do_sample":True,
-        # "top_k":50,
-        "top_p":0.9,
-        "temperature":0.45,
+        # "do_sample":True,
+        # # "top_k":50,
+        # "top_p":0.9,
+        "temperature":0.000001,
         "repetition_penalty":1.4,
         "pad_token_id":tokenizer.eos_token_id,
     }
@@ -222,7 +222,7 @@ def distance_matrix_plot(result_dict,
 
 if __name__ == '__main__':
 
-    prompt = EXAMPLE_9
+    prompt = EXAMPLE_3
     # prompt = "After negotiating for the price of a phone, Karsyn bought a phone at 20% of the initial price. If the phone's initial price was $600, calculate how much she paid after negotiating."
     
     # id_list_0, token_probs_0 = extract_fingerprint(model_name_or_path_0, prompt)
@@ -233,6 +233,6 @@ if __name__ == '__main__':
     
     result_dict = get_distance_matrix(seed_prompt=prompt)
     # print(distance_matrix)
-    distance_matrix_plot(result_dict, "test_9.png")
+    distance_matrix_plot(result_dict, "test_3.png")
     
     # trace_plot(token_probs, model_name_or_path)
