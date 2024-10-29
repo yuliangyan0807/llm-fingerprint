@@ -68,7 +68,7 @@ def generation(model_name_or_path: str,
 
     gen_sequences = output.sequences[:, input_ids.shape[-1]:]
     decoded_output = [tokenizer.decode(ids) for ids in gen_sequences]
-    print("Generated content is: {}".format(decoded_output))
+    # print("Generated content is: {}".format(decoded_output))
     
     # batch_decoded_output = tokenizer.batch_decode(output.sequences)[0]
     # print(batch_decoded_output)
@@ -92,7 +92,7 @@ def generation(model_name_or_path: str,
     id_list = gen_sequences.tolist()[0]
     
     tokens = [tokenizer.decode(token_id) for token_id in id_list]
-    print("tokens: {}".format(tokens))
+    # print("tokens: {}".format(tokens))
     
     # return id_list, token_probs
     return tokens, token_probs, decoded_output[0]

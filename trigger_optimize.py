@@ -1,9 +1,10 @@
 import random
 import numpy as np
-from datasets import load_dataset, Dataset
+from datasets import load_dataset, Dataset, load_from_disk
 from model_list import *
 from metrics import *
 from generation import *
+from tqdm import tqdm
 
 # Hypothetical metric functions
 def compute_intra_model_similarity(model, fine_tuned_model, prompt):
@@ -53,7 +54,10 @@ def optimize_prompts_with_pair_sampling(trigger_set,
     prompt_weights = []
     
     # Calculate importance weights for each prompt
-    for prompt in trigger_set:
+    print(f"start to initial search")
+    for data in tqdm(trigger_set):
+        # print(data)
+        prompt = data['prompt']
         intra_sim_score = sum(
             compute_intra_model_similarity(model, fine_tuned, prompt) 
             for model, fine_tuned in zip(models, fine_tuned_models)
@@ -78,7 +82,8 @@ def optimize_prompts_with_pair_sampling(trigger_set,
     candidate_prompts = random.choices(trigger_set, weights=prompt_probs, k=sample_size)
     prompt_scores = []
 
-    for prompt in candidate_prompts:
+    print(f"start to search the final trigger set")
+    for prompt in tqdm(candidate_prompts):
         intra_sim_score = 0
         inter_div_score = 0
 
@@ -109,7 +114,9 @@ def optimize_prompts_with_pair_sampling(trigger_set,
 
 if __name__ == '__main__':
     # Example usage
-    seed_trigger_set = load_dataset("./data/seed_trigger_set")
+    seed_trigger_set = load_from_disk("./data/seed_trigger_set")
+    seed_trigger_set = seed_trigger_set.select(range(20))
+    # seed_trigger_set = seed_trigger_set[0 : 20]
     models = [
         "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/",
         "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B-Instruct/",
@@ -135,8 +142,8 @@ if __name__ == '__main__':
     optimized_prompts = optimize_prompts_with_pair_sampling(seed_trigger_set, 
                                                             models, 
                                                             fine_tuned_models, 
-                                                            M=15, 
-                                                            sample_size=150, 
+                                                            M=1, 
+                                                            sample_size=10, 
                                                             alpha=0.6, 
                                                             beta=0.4
                                                             )
