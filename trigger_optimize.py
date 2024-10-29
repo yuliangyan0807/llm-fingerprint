@@ -58,20 +58,24 @@ def optimize_prompts_with_pair_sampling(trigger_set,
     for data in tqdm(trigger_set):
         # print(data)
         prompt = data['prompt']
+        # intra_sim_score = sum(
+        #     compute_intra_model_similarity(model, fine_tuned, prompt) 
+        #     for model, fine_tuned in zip(models, fine_tuned_models)
+        # )
         intra_sim_score = sum(
             compute_intra_model_similarity(model, fine_tuned, prompt) 
             for model, fine_tuned in zip(models, fine_tuned_models)
-        )
+        ) / len(models)
         
         # Randomly sample subset_size pairs of models for inter-model divergence
         model_pairs = random.sample([(i, j) for i in range(len(models)) for j in range(i + 1, len(models))], subset_size)
         inter_div_score = sum(
             compute_inter_model_divergence(models[i], models[j], prompt) 
             for i, j in model_pairs
-        )
+        ) / subset_size
         
         # Importance weight based on prompt characteristics
-        weight = alpha * intra_sim_score - beta * inter_div_score
+        weight = max(alpha * intra_sim_score - beta * inter_div_score, 0)
         prompt_weights.append(weight)
 
     # Normalize weights to form a probability distribution
@@ -115,7 +119,7 @@ def optimize_prompts_with_pair_sampling(trigger_set,
 if __name__ == '__main__':
     # Example usage
     seed_trigger_set = load_from_disk("./data/seed_trigger_set")
-    seed_trigger_set = seed_trigger_set.select(range(20))
+    # seed_trigger_set = seed_trigger_set.select(range(20))
     # seed_trigger_set = seed_trigger_set[0 : 20]
     models = [
         "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/",
@@ -142,9 +146,10 @@ if __name__ == '__main__':
     optimized_prompts = optimize_prompts_with_pair_sampling(seed_trigger_set, 
                                                             models, 
                                                             fine_tuned_models, 
-                                                            M=1, 
-                                                            sample_size=10, 
-                                                            alpha=0.6, 
-                                                            beta=0.4
+                                                            M=15, 
+                                                            sample_size=150, 
+                                                            alpha=0.4, 
+                                                            beta=0.6,
+                                                            subset_size=5
                                                             )
     print("Optimized prompts:", optimized_prompts)
