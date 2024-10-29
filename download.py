@@ -16,5 +16,7 @@ from evaluate import load
 # results = perplexity.compute(predictions=input_texts, model_id="/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B/")
 # print(results)
 
-ds = load_dataset("openai/gsm8k", "main")
-print(ds['train'][0])
+# ds = load_dataset("openai/gsm8k", "main")
+# print(ds['train'][0])
+
+ds = load_dataset("Intel/orca_dpo_pairs")

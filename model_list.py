@@ -14,6 +14,7 @@ MODEL_LIST = ["/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/",
               "/mnt/data/yuliangyan/deepseek-ai/deepseek-math-7b-instruct/",
               "/mnt/data/yuliangyan/Qwen/Qwen2.5-7B/",
               "/mnt/data/yuliangyan/microsoft/Phi-3-medium-4k-instruct",
+              "/mnt/data/yuliangyan/google/gemma-2-2b"
               ]
 
 MODEL_LABEL = ["llama3",
@@ -31,7 +32,9 @@ MODEL_LABEL = ["llama3",
                "deepseek-chat-ft",
                "deepseek-math",
                "qwen2.5",
-               "phi3"]
+               "phi3",
+               "gemma2"
+               ]
 # TODO
 # gemmma-2
 
