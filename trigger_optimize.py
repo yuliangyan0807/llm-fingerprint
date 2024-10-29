@@ -119,16 +119,20 @@ def optimize_prompts_with_pair_sampling(trigger_set,
 if __name__ == '__main__':
     # Example usage
     seed_trigger_set = load_from_disk("./data/seed_trigger_set")
-    # seed_trigger_set = seed_trigger_set.select(range(20))
+    print(len(seed_trigger_set))
+    seed_trigger_set = seed_trigger_set.select(range(36, 50))
     # seed_trigger_set = seed_trigger_set[0 : 20]
     models = [
         "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/",
         "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B-Instruct/",
-        "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B/",
+        # "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B/",
+        
         # "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B-Instruct/",
-        "/mnt/data/yuliangyan/mistralai/Mistral-7B-v0.1/",
-        "/mnt/data/yuliangyan/deepseek-ai/deepseek-llm-7b-base/",
-        "/mnt/data/yuliangyan/deepseek-ai/deepseek-llm-7b-chat/",
+        
+        # "/mnt/data/yuliangyan/mistralai/Mistral-7B-v0.1/",
+        # "/mnt/data/yuliangyan/deepseek-ai/deepseek-llm-7b-base/",
+        # "/mnt/data/yuliangyan/deepseek-ai/deepseek-llm-7b-chat/",
+        
         # "/mnt/data/yuliangyan/deepseek-ai/deepseek-math-7b-instruct/",
         # "/mnt/data/yuliangyan/Qwen/Qwen2.5-7B/",
         # "/mnt/data/yuliangyan/microsoft/Phi-3-medium-4k-instruct",
@@ -136,10 +140,10 @@ if __name__ == '__main__':
     fine_tuned_models = [
         "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama3-ft",
         "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama3-instruct-ft",
-        "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama31-ft",
-        "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/mistral-ft",
-        "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/deepseek-ft",
-        "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/deepseek-chat-ft",
+        # "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama31-ft",
+        # "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/mistral-ft",
+        # "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/deepseek-ft",
+        # "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/deepseek-chat-ft",
     ]
 
     # Find optimized prompts
@@ -150,6 +154,6 @@ if __name__ == '__main__':
                                                             sample_size=150, 
                                                             alpha=0.4, 
                                                             beta=0.6,
-                                                            subset_size=5
+                                                            subset_size=1
                                                             )
     print("Optimized prompts:", optimized_prompts)
