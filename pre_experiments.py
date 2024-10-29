@@ -17,7 +17,7 @@ from model_list import *
 
 import logging
 logging.basicConfig(level=logging.INFO,
-                    filename='example3.log',
+                    filename='example5.log',
                     filemode='a',
                     format='%(message)s'
                     )
@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO,
 def extract_fingerprint(model_name_or_path: str,
                         prompt: str,
                         fine_tuned=False):
-    if "test" in model_name_or_path:
+    if "instruction_tuning_models" in model_name_or_path:
         fine_tuned = True
     if not fine_tuned:
         model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
@@ -70,10 +70,10 @@ def extract_fingerprint(model_name_or_path: str,
         "output_scores":True,
         #"output_hidden_states":True,
         "max_new_tokens":256,
-        # "do_sample":True,
+        "do_sample":False,
         # # "top_k":50,
         # "top_p":0.9,
-        "temperature":0.000001,
+        # "temperature":0.000001,
         "repetition_penalty":1.4,
         "pad_token_id":tokenizer.eos_token_id,
     }
@@ -233,6 +233,6 @@ if __name__ == '__main__':
     
     result_dict = get_distance_matrix(seed_prompt=prompt)
     # print(distance_matrix)
-    distance_matrix_plot(result_dict, "test_3.png")
+    distance_matrix_plot(result_dict, "test_5.png")
     
     # trace_plot(token_probs, model_name_or_path)

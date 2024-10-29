@@ -38,6 +38,15 @@ def weighted_edit_distance(s1, s2, conf1, conf2):
 
     return dp[m][n]
 
+def jaccard_similarity(tokens1, tokens2):
+    
+    set1 = set(tokens1)
+    set2 = set(tokens2)
+    intersection = len(set1.intersection(set2))
+    union = len(set1.union(set2))
+    
+    return intersection / union if union != 0 else 0
+
 # semantic similarity
 def get_semantic_similarity_with_bert_score(text_0, text_1):
     """

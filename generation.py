@@ -7,7 +7,7 @@ def generation(model_name_or_path: str,
                         temperature: float=1.0 ,
                         fine_tuned=False):
     
-    if "test" in model_name_or_path in model_name_or_path:
+    if "instruction_tuning_models" in model_name_or_path in model_name_or_path:
         fine_tuned = True
     if not fine_tuned:
         model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
@@ -52,14 +52,14 @@ def generation(model_name_or_path: str,
         "output_scores":True,
         #"output_hidden_states":True,
         "max_new_tokens":256,
-        # "do_sample":True,
+        "do_sample":False,
         # "top_k":3,
         # "top_p":0.9,
-        "temperature": temperature,
+        # "temperature": temperature,
         "repetition_penalty":1.4,
         "pad_token_id":tokenizer.eos_token_id,
     }
-
+    
     with torch.no_grad():
         # {sequences: , scores: , hidden_states: , attentions: }
         output = model.generate(**generation_input)
@@ -69,5 +69,30 @@ def generation(model_name_or_path: str,
     gen_sequences = output.sequences[:, input_ids.shape[-1]:]
     decoded_output = [tokenizer.decode(ids) for ids in gen_sequences]
     print("Generated content is: {}".format(decoded_output))
+    
+    # batch_decoded_output = tokenizer.batch_decode(output.sequences)[0]
+    # print(batch_decoded_output)
 
-    return decoded_output[0]
+    tgt_len0 = output.sequences.size()[-1] - input_ids.size()[-1]
+    tgt_len = len(output.scores)
+    assert tgt_len == tgt_len0
+
+    token_probs = []
+    index = []
+
+    # TODO
+    # batch loop
+    for i, score in enumerate(output.scores):
+        # Convert the scores to probabilities
+        probs = torch.softmax(score, -1)
+        # Take the probability for the generated tokens (at position i in sequence)
+        token_probs.append(probs[0, gen_sequences[0, i]].item())
+        index.append(i)
+
+    id_list = gen_sequences.tolist()[0]
+    
+    tokens = [tokenizer.decode(token_id) for token_id in id_list]
+    print("tokens: {}".format(tokens))
+    
+    # return id_list, token_probs
+    return tokens, token_probs, decoded_output[0]
