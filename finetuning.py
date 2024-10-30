@@ -239,21 +239,21 @@ def train():
         )
     
     # lora config
-    # lora_modules = [
-    #     "q_proj",
-    #     "k_proj",
-    #     "v_proj",
-    #     "o_proj",
-    #     "up_proj",
-    #     "gate_proj",
-    #     "down_proj",
-    # ]
+    lora_modules = [
+        "q_proj",
+        # "k_proj",
+        "v_proj",
+        "o_proj",
+        # "up_proj",
+        # "gate_proj",
+        # "down_proj",
+    ]
     # lora_modules = "all-linear"
     
     lora_config = LoraConfig(
         r=training_args.lora_rank,
         lora_alpha=training_args.lora_alpha,
-        # target_modules=lora_modules,
+        target_modules=lora_modules,
         lora_dropout=0.1,
         bias="none",
         task_type="CAUSAL_LM",
