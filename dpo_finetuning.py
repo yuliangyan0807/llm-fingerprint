@@ -14,6 +14,8 @@ from datasets import load_dataset
 from trl import DPOTrainer, DPOConfig
 from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 
+from utils import *
+
 def return_prompt_and_responses(samples):
     return {
         "prompt": [
@@ -78,23 +80,25 @@ if __name__ == '__main__':
     # model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16, quantization_config=bnb_config)
     # model.config.use_cache = False
     
-    config = PeftConfig.from_pretrained(model_args.model_name_or_path, 
-                                        cache_dir=training_args.cache_dir,
-                                        )
-    base_model = AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
-                                        cache_dir=training_args.cache_dir,
-                                                )
-    model = PeftModel.from_pretrained(base_model, model_args.model_name_or_path, 
-                                        cache_dir=training_args.cache_dir,
-                                                )
-    tokenizer = AutoTokenizer.from_pretrained(
-                                            model_args.model_name_or_path,
-                                            cache_dir=training_args.cache_dir,
-                                            # model_max_length=2048,
-                                            padding_side="right",
-                                            use_fast=False,
-                                            trust_remote_code=True,
-                                            )
+    # config = PeftConfig.from_pretrained(model_args.model_name_or_path, 
+    #                                     cache_dir=training_args.cache_dir,
+    #                                     )
+    # base_model = AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
+    #                                     cache_dir=training_args.cache_dir,
+    #                                             )
+    # model = PeftModel.from_pretrained(base_model, model_args.model_name_or_path, 
+    #                                     cache_dir=training_args.cache_dir,
+    #                                             )
+    # tokenizer = AutoTokenizer.from_pretrained(
+    #                                         model_args.model_name_or_path,
+    #                                         cache_dir=training_args.cache_dir,
+    #                                         model_max_length=3096,
+    #                                         padding_side="right",
+    #                                         use_fast=False,
+    #                                         trust_remote_code=True,
+    #                                         )
+    model, tokenizer = load_hf_model(model_name_or_path=model_args.model_name_or_path,
+                                     bnb_config=bnb_config)
     
     model = prepare_model_for_kbit_training(model)
 
@@ -106,6 +110,7 @@ if __name__ == '__main__':
         )
 
     dataset = load_dataset(data_args.data_path, split="train")
+    dataset = dataset.select(range(100))
     original_columns = dataset.column_names
 
     dataset = dataset.map(

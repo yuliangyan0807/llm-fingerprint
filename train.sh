@@ -1,8 +1,8 @@
 torchrun --nproc_per_node=4  finetuning.py \
-    --model_name_or_path "/mnt/data/yuliangyan/google/gemma-2-2b" \
+    --model_name_or_path "/mnt/data/yuliangyan/microsoft/Phi-3-medium-4k-instruct" \
     --data_path "tatsu-lab/alpaca" \
     --bf16 True \
-    --output_dir "./instruction_tuning_models/gemma2-ft" \
+    --output_dir "./instruction_tuning_models/phi3-instruct-ft" \
     --lora_rank 4 \
     --num_train_epochs 3 \
     --per_device_train_batch_size 4 \

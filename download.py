@@ -1,4 +1,4 @@
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 from evaluate import load
 
 # ds = load_dataset("tatsu-lab/alpaca")
@@ -19,4 +19,14 @@ from evaluate import load
 # ds = load_dataset("openai/gsm8k", "main")
 # print(ds['train'][0])
 
-ds = load_dataset("Intel/orca_dpo_pairs")
+# ds = load_dataset("Intel/orca_dpo_pairs")
+
+ds = load_from_disk('./data/optimized_trigger_set')
+# print(len(ds))
+# for i in range(len(ds)):
+#     print(ds[i]['prompt'])
+
+ds = set([data['prompt'] for data in ds])
+print(len(ds))
+for data in ds:
+    print(data)

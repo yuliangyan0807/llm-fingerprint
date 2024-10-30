@@ -1,4 +1,5 @@
 from evaluate import load
+import numpy as np
 
 # standard edit distance
 def edit_distance(s1, s2):
@@ -46,6 +47,27 @@ def jaccard_similarity(tokens1, tokens2):
     union = len(set1.union(set2))
     
     return intersection / union if union != 0 else 0
+
+def calculate_varentropy(logits):
+    """
+    Calculate the Varentropy of the given logits.
+
+    Parameters:
+    - logits: A numpy array of logits (shape: [num_tokens, vocab_size])
+
+    Returns:
+    - varentropy: The computed Varentropy value
+    """
+    # Convert logits to probabilities using softmax
+    probabilities = np.exp(logits) / np.sum(np.exp(logits), axis=1, keepdims=True)
+
+    # Calculate the entropy for each token
+    entropy = -np.sum(probabilities * np.log(probabilities + 1e-10), axis=1)  # Adding a small value to avoid log(0)
+
+    # Calculate the variance of the entropies
+    varentropy = np.var(entropy)
+
+    return varentropy
 
 # semantic similarity
 def get_semantic_similarity_with_bert_score(text_0, text_1):
