@@ -127,6 +127,7 @@ def batch_generation(
         "input_ids":input_ids,
         "return_dict_in_generate":True,
         "output_scores":True,
+        "output_logits":True,
         #"output_hidden_states":True,
         "max_new_tokens":max_new_tokens,
         "do_sample":False,
@@ -145,23 +146,27 @@ def batch_generation(
     # print(gen_sequences)
     decoded_output = [tokenizer.decode(ids) for ids in gen_sequences] # texts: (batch_size, text_length))
     # print(decoded_output)
+    
+    # compute the entropy
+    # probs = torch.softmax(output.logits, dim=-1)
 
     token_probs = [[] for _ in range(len(prompt))]
     # output.scores: (max_length, batch_size, vocab_size)
-    print(len(output.scores))
 
     # batch loop
     for i in range(len(output.scores)):
         batch_score = output.scores[i] # (batch_size, vocab_size)
         # Convert the scores to probabilities
         probs = torch.softmax(batch_score, -1) # (batch_size, vocab_size)
-        print(probs.shape)
         # Take the probability for the generated tokens (at position i in sequence)
         # Iterate each batch
         for j in range(len(probs)):
-            try:
-                token_probs[j].append(probs[j, gen_sequences[j, i].item()].item())
-            except IndexError as e:
+            if i < len(gen_sequences[j]):
+                try:
+                    token_probs[j].append(probs[j, gen_sequences[j, i].item()].item())
+                except IndexError as e:
+                    continue
+            else:
                 continue
 
     batch_tokens = []
@@ -184,7 +189,8 @@ if __name__ == '__main__':
     "Once upon a time,",
     "In a galaxy far, far away,",
     "Artificial intelligence can",
-    "The future of technology"
+    "The future of technology",
+    "hi"
     ]
     
     tokens, token_probs, decode_output = batch_generation(model=model, 
@@ -194,3 +200,5 @@ if __name__ == '__main__':
     print(tokens)
     print(token_probs)
     print(decode_output)
+    for token_prob in token_probs:
+        print(len(token_prob))
