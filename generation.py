@@ -145,27 +145,18 @@ def batch_generation(
         output = model.generate(**generation_input)
 
     gen_sequences = output.sequences[:, input_ids.shape[-1]:] # token_ids: (batch_size, max_gen_length)
-    # print(gen_sequences)
     decoded_output = [tokenizer.decode(ids) for ids in gen_sequences] # texts: (batch_size, text_length))
-    # print(decoded_output)
+    
     # attention mask for filtering the padding tokens
     attention_mask = torch.where(gen_sequences == 0, 0, 1)
-    # print(attention_mask)
-    # gen_sequences = [list(filter(lambda x: x != 0, ids)) for ids in gen_sequences]
-    # gen_sequences = [[int(t.item()) for t in seq] for seq in gen_sequences]
-    # print(gen_sequences[0][1])
     
     # compute the entropy
     logits = torch.stack([logit for logit in output.logits], dim=0).permute(1, 0, 2) # (batch_size, seq_length, vocab_size)
-    # print(logits.shape)
     probs = torch.softmax(logits, dim=-1)
-    # print(probs.shape)
     entropy = torch.sum(-(probs * torch.log2(probs + 1e-12)), dim=-1) * attention_mask
-    print(entropy)
-    # print(entropy.shape)
-    varentropy = torch.var(entropy, dim=-1)
-    print(varentropy)
-    # print(varentropy.shape)
+    entropy = [list(filter(lambda x: x != 0, seq)) for seq in entropy]
+    entropy = [[t.item() for t in seq] for seq in entropy]
+    # varentropy = torch.var(entropy, dim=-1)
 
     token_probs = [[] for _ in range(len(prompt))]
 
@@ -177,9 +168,9 @@ def batch_generation(
         # Take the probability for the generated tokens (at position i in sequence)
         # Iterate each batch
         for j in range(len(probs)):
+            # filter out the pad token
             if gen_sequences[j, i].item() != 0:
                 try:
-                    # token_probs[j].append(probs[j, gen_sequences[j, i].item()].item())
                     token_probs[j].append(probs[j, gen_sequences[j, i].item()].item())
                 except IndexError as e:
                     continue
@@ -199,14 +190,14 @@ def batch_generation(
     # token_probs = token_probs * attention_mask
     # token_probs = [filter(lambda x: x != 0, token_prob) for token_prob in token_probs]
     
-    return batch_tokens, token_probs, decoded_output
+    return batch_tokens, token_probs, decoded_output, entropy
 
 if __name__ == '__main__':
     
     warnings.filterwarnings('ignore')
     
     # debug
-    model, tokenizer = load_hf_model("/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama3-ft",)
+    model, tokenizer = load_hf_model("/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/",)
     
     prompts = [
     "Once upon a time,",
@@ -216,10 +207,11 @@ if __name__ == '__main__':
     "Let G be a group of order 35. What can be said about G?  Answer Choices: (A) G must be abelian. (B) G must be cyclic. (C) G must be a direct product of cyclic groups. (D) G cannot be cyclic."
     ]
     
-    tokens, token_probs, decode_output = batch_generation(model=model, 
+    tokens, token_probs, decode_output, entropy = batch_generation(model=model, 
                                                           tokenizer=tokenizer, 
                                                           prompt=prompts,
                                                           max_new_tokens=32)
     print(tokens)
     print(token_probs)
     print(decode_output)
+    print(entropy)
