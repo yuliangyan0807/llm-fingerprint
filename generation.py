@@ -7,9 +7,10 @@ from typing import List
 import warnings
 
 def generation(model_name_or_path: str,
-                        prompt: str,
-                        temperature: float=1.0 ,
-                        fine_tuned=False):
+               prompt: str,
+               temperature: float=1.0,
+               fine_tuned=False
+               ):
     
     if "instruction_tuning_models" in model_name_or_path in model_name_or_path:
         fine_tuned = True
@@ -156,6 +157,7 @@ def batch_generation(
     entropy = torch.sum(-(probs * torch.log2(probs + 1e-12)), dim=-1) * attention_mask
     entropy = [list(filter(lambda x: x != 0, seq)) for seq in entropy]
     entropy = [[t.item() for t in seq] for seq in entropy]
+    mean_entropy = [sum(seq) / len(seq) for seq in entropy]
     # varentropy = torch.var(entropy, dim=-1)
 
     token_probs = [[] for _ in range(len(prompt))]
@@ -185,12 +187,8 @@ def batch_generation(
             if token_id != 0:
                 tokens.append(tokenizer.decode(token_id))   
         batch_tokens.append(tokens)
-        
-    # filter pad token
-    # token_probs = token_probs * attention_mask
-    # token_probs = [filter(lambda x: x != 0, token_prob) for token_prob in token_probs]
     
-    return batch_tokens, token_probs, decoded_output, entropy
+    return batch_tokens, token_probs, decoded_output, entropy, mean_entropy
 
 if __name__ == '__main__':
     
@@ -200,14 +198,14 @@ if __name__ == '__main__':
     model, tokenizer = load_hf_model("/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/",)
     
     prompts = [
-    "Once upon a time,",
-    "In a galaxy far, far away,",
-    "Artificial intelligence can",
-    "The future of technology",
+    # "Once upon a time,",
+    # "In a galaxy far, far away,",
+    # "Artificial intelligence can",
+    # "The future of technology",
     "Let G be a group of order 35. What can be said about G?  Answer Choices: (A) G must be abelian. (B) G must be cyclic. (C) G must be a direct product of cyclic groups. (D) G cannot be cyclic."
     ]
     
-    tokens, token_probs, decode_output, entropy = batch_generation(model=model, 
+    tokens, token_probs, decode_output, entropy, mean_entropy = batch_generation(model=model, 
                                                           tokenizer=tokenizer, 
                                                           prompt=prompts,
                                                           max_new_tokens=32)
@@ -215,3 +213,4 @@ if __name__ == '__main__':
     print(token_probs)
     print(decode_output)
     print(entropy)
+    print(mean_entropy)

@@ -5,6 +5,61 @@ from model_list import *
 from metrics import *
 from generation import *
 from tqdm import tqdm
+from typing import List
+from utils import *
+from datasets import load_from_disk, Dataset
+
+def pre_generate_trajectory(
+    model_list: List[str],
+    # seed_trigger_set,
+    batch_size: int=50,
+    max_new_tokens: int=64,
+):
+    """
+    Given the trigger set, pre generate the trajectory of the models in the model lists.
+    Tajectory include tokens, token_probs, entropy, and so on.
+    """
+    print(f"loading dataset...")
+    seed_trigger_set = load_from_disk('./data/seed_trigger_set')
+    print(f"{len(seed_trigger_set)} data in total")
+    prompts = seed_trigger_set['prompt']
+    
+    assert len(seed_trigger_set) % batch_size == 0, "choose another batch size!"
+    
+    tokens_, token_probs_, decode_output_, entropy_, mean_entropy_, labels = [], [], [], [], [], []
+    
+    # Iterate the model list
+    for label, model_name_or_path in enumerate(model_list):
+        # load the model
+        model, tokenizer = load_hf_model(model_name_or_path)
+        # iterate the prompt
+        for i in tqdm(range(0, len(seed_trigger_set), batch_size)):
+            batch_prompt = prompts[i : i + batch_size]
+            tokens, token_probs, decode_output, entropy, mean_entropy = batch_generation(
+                model=model,
+                tokenizer=tokenizer,
+                prompt=batch_prompt,
+                max_new_tokens=max_new_tokens
+            )
+            tokens_ = tokens_ + tokens
+            token_probs_ = token_probs_ + token_probs
+            decode_output_ = decode_output_ + decode_output
+            entropy_ = entropy_ + entropy
+            mean_entropy_ = mean_entropy_ + mean_entropy
+        
+        model_label = [[label] for _ in range(len(seed_trigger_set))]
+        labels = labels + model_label
+    
+    print(f"saving dataset...")
+    optimized_trigger_set = {"prompt": prompts,
+                             "tokens": tokens_,
+                             "token_probs": token_probs_,
+                             "decode_output": decode_output_,
+                             "entropy": entropy_,
+                             "mean_entropy": mean_entropy_
+                             }
+    optimized_trigger_set = Dataset.from_dict(optimized_trigger_set)
+    optimized_trigger_set.save_to_disk('./data/optimized_trigger_set')
 
 # Hypothetical metric functions
 def compute_intra_model_similarity(model, fine_tuned_model, prompt):
@@ -118,42 +173,24 @@ def optimize_prompts_with_pair_sampling(trigger_set,
 
 if __name__ == '__main__':
     # Example usage
-    seed_trigger_set = load_from_disk("./data/seed_trigger_set")
-    print(len(seed_trigger_set))
-    seed_trigger_set = seed_trigger_set.select(range(36, 50))
-    # seed_trigger_set = seed_trigger_set[0 : 20]
-    models = [
-        "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/",
-        "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B-Instruct/",
-        # "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B/",
-        
-        # "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B-Instruct/",
-        
-        # "/mnt/data/yuliangyan/mistralai/Mistral-7B-v0.1/",
-        # "/mnt/data/yuliangyan/deepseek-ai/deepseek-llm-7b-base/",
-        # "/mnt/data/yuliangyan/deepseek-ai/deepseek-llm-7b-chat/",
-        
-        # "/mnt/data/yuliangyan/deepseek-ai/deepseek-math-7b-instruct/",
-        # "/mnt/data/yuliangyan/Qwen/Qwen2.5-7B/",
-        # "/mnt/data/yuliangyan/microsoft/Phi-3-medium-4k-instruct",
-    ]
-    fine_tuned_models = [
-        "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama3-ft",
-        "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama3-instruct-ft",
-        # "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama31-ft",
-        # "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/mistral-ft",
-        # "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/deepseek-ft",
-        # "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/deepseek-chat-ft",
-    ]
+    # seed_trigger_set = load_from_disk("./data/seed_trigger_set")
+    # print(len(seed_trigger_set))
+    # seed_trigger_set = seed_trigger_set.select(range(0, 5))
 
-    # Find optimized prompts
-    optimized_prompts = optimize_prompts_with_pair_sampling(seed_trigger_set, 
-                                                            models, 
-                                                            fine_tuned_models, 
-                                                            M=15, 
-                                                            sample_size=150, 
-                                                            alpha=0.4, 
-                                                            beta=0.6,
-                                                            subset_size=1
-                                                            )
-    print("Optimized prompts:", optimized_prompts)
+    # # Find optimized prompts
+    # optimized_prompts = optimize_prompts_with_pair_sampling(seed_trigger_set, 
+    #                                                         models, 
+    #                                                         fine_tuned_models, 
+    #                                                         M=15, 
+    #                                                         sample_size=150, 
+    #                                                         alpha=0.4, 
+    #                                                         beta=0.6,
+    #                                                         subset_size=1
+    #                                                         )
+    # print("Optimized prompts:", optimized_prompts)
+    
+    model_list = MODEL_LIST
+    pre_generate_trajectory(model_list=model_list,
+                            # seed_trigger_set=seed_trigger_set,
+                            batch_size=50,
+                            max_new_tokens=16)

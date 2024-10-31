@@ -55,14 +55,14 @@ def load_hf_model(model_name_or_path,
             config = PeftConfig.from_pretrained(model_name_or_path)
             model = AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
                                                         return_dict=True, 
-                                                        # device_map="auto",
+                                                        device_map="auto",
                                                         output_hidden_states=True,
                                                         # torch_dtype=torch.bfloat16,
                                                         # quantization_config=bnb_config
                                                         )
             model = PeftModel.from_pretrained(model, model_name_or_path, 
                                                         return_dict=True, 
-                                                        # device_map="auto",
+                                                        device_map="auto",
                                                         output_hidden_states=True,
                                                         torch_dtype=torch.bfloat16,
                                                         quantizaiton_config=bnb_config
