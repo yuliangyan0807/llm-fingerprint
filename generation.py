@@ -144,13 +144,16 @@ def batch_generation(
         # {sequences: , scores: , hidden_states: , attentions: }
         output = model.generate(**generation_input)
 
-    gen_sequences = output.sequences[:, input_ids.shape[-1]:] # token_ids: (batch_size, min(gen_len, max_gen_length))
+    gen_sequences = output.sequences[:, input_ids.shape[-1]:] # token_ids: (batch_size, max_gen_length)
     # print(gen_sequences)
     decoded_output = [tokenizer.decode(ids) for ids in gen_sequences] # texts: (batch_size, text_length))
     # print(decoded_output)
     # attention mask for filtering the padding tokens
     attention_mask = torch.where(gen_sequences == 0, 0, 1)
     # print(attention_mask)
+    # gen_sequences = [list(filter(lambda x: x != 0, ids)) for ids in gen_sequences]
+    # gen_sequences = [[int(t.item()) for t in seq] for seq in gen_sequences]
+    # print(gen_sequences[0][1])
     
     # compute the entropy
     logits = torch.stack([logit for logit in output.logits], dim=0).permute(1, 0, 2) # (batch_size, seq_length, vocab_size)
@@ -158,14 +161,13 @@ def batch_generation(
     probs = torch.softmax(logits, dim=-1)
     # print(probs.shape)
     entropy = torch.sum(-(probs * torch.log2(probs + 1e-12)), dim=-1) * attention_mask
-    # print(entropy)
+    print(entropy)
     # print(entropy.shape)
     varentropy = torch.var(entropy, dim=-1)
-    # print(varentropy)
+    print(varentropy)
     # print(varentropy.shape)
 
     token_probs = [[] for _ in range(len(prompt))]
-    # output.scores: (max_length, batch_size, vocab_size)
 
     # batch loop
     for i in range(len(output.scores)):
@@ -175,27 +177,27 @@ def batch_generation(
         # Take the probability for the generated tokens (at position i in sequence)
         # Iterate each batch
         for j in range(len(probs)):
-            if i < len(gen_sequences[j]):
+            if gen_sequences[j, i].item() != 0:
                 try:
+                    # token_probs[j].append(probs[j, gen_sequences[j, i].item()].item())
                     token_probs[j].append(probs[j, gen_sequences[j, i].item()].item())
                 except IndexError as e:
                     continue
             else:
                 continue
     
-    print(gen_sequences)
     batch_tokens = []
     for token_ids in gen_sequences:
         tokens = []
         for token_id in token_ids:
-            tokens.append(tokenizer.decode(token_id))   
+            # filter out the pad token
+            if token_id != 0:
+                tokens.append(tokenizer.decode(token_id))   
         batch_tokens.append(tokens)
         
     # filter pad token
-    # filter_batch_tokens = []
-    # filtered_token_probs = []
-    # for batch_token, token_prob in zip(batch_tokens, token_probs):
-    #     filter_batch_tokens.append(torch.masked_select())
+    # token_probs = token_probs * attention_mask
+    # token_probs = [filter(lambda x: x != 0, token_prob) for token_prob in token_probs]
     
     return batch_tokens, token_probs, decoded_output
 
