@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from peft import PeftModel, PeftConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from utils import *
@@ -147,11 +148,21 @@ def batch_generation(
     # print(gen_sequences)
     decoded_output = [tokenizer.decode(ids) for ids in gen_sequences] # texts: (batch_size, text_length))
     # print(decoded_output)
+    # attention mask for filtering the padding tokens
     attention_mask = torch.where(gen_sequences == 0, 0, 1)
     # print(attention_mask)
     
     # compute the entropy
-    # probs = torch.softmax(output.logits, dim=-1)
+    logits = torch.stack([logit for logit in output.logits], dim=0).permute(1, 0, 2) # (batch_size, seq_length, vocab_size)
+    # print(logits.shape)
+    probs = torch.softmax(logits, dim=-1)
+    # print(probs.shape)
+    entropy = torch.sum(-(probs * torch.log2(probs + 1e-12)), dim=-1) * attention_mask
+    # print(entropy)
+    # print(entropy.shape)
+    varentropy = torch.var(entropy, dim=-1)
+    # print(varentropy)
+    # print(varentropy.shape)
 
     token_probs = [[] for _ in range(len(prompt))]
     # output.scores: (max_length, batch_size, vocab_size)
@@ -196,10 +207,10 @@ if __name__ == '__main__':
     model, tokenizer = load_hf_model("/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama3-ft",)
     
     prompts = [
-    # "Once upon a time,",
-    # "In a galaxy far, far away,",
-    # "Artificial intelligence can",
-    # "The future of technology",
+    "Once upon a time,",
+    "In a galaxy far, far away,",
+    "Artificial intelligence can",
+    "The future of technology",
     "Let G be a group of order 35. What can be said about G?  Answer Choices: (A) G must be abelian. (B) G must be cyclic. (C) G must be a direct product of cyclic groups. (D) G cannot be cyclic."
     ]
     
@@ -210,5 +221,3 @@ if __name__ == '__main__':
     print(tokens)
     print(token_probs)
     print(decode_output)
-    for token_prob in token_probs:
-        print(len(token_prob))
