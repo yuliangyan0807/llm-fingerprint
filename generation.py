@@ -106,9 +106,9 @@ def batch_generation(
                     prompt: List[str],
                     max_new_tokens: int=64,
                     ):
-    
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+        # tokenizer.pad_token_id = 0
 
     # (batch_size, max_length)
     input_ids = tokenizer(
@@ -135,7 +135,8 @@ def batch_generation(
         # "top_p":0.9,
         # "temperature": temperature,
         "repetition_penalty":1.4,
-        "pad_token_id":tokenizer.eos_token_id,
+        # "pad_token_id":tokenizer.eos_token_id,
+        "pad_token_id":0,
     }
     
     with torch.no_grad():
@@ -146,6 +147,8 @@ def batch_generation(
     # print(gen_sequences)
     decoded_output = [tokenizer.decode(ids) for ids in gen_sequences] # texts: (batch_size, text_length))
     # print(decoded_output)
+    attention_mask = torch.where(gen_sequences == 0, 0, 1)
+    # print(attention_mask)
     
     # compute the entropy
     # probs = torch.softmax(output.logits, dim=-1)
@@ -168,13 +171,20 @@ def batch_generation(
                     continue
             else:
                 continue
-
+    
+    print(gen_sequences)
     batch_tokens = []
     for token_ids in gen_sequences:
         tokens = []
         for token_id in token_ids:
             tokens.append(tokenizer.decode(token_id))   
         batch_tokens.append(tokens)
+        
+    # filter pad token
+    # filter_batch_tokens = []
+    # filtered_token_probs = []
+    # for batch_token, token_prob in zip(batch_tokens, token_probs):
+    #     filter_batch_tokens.append(torch.masked_select())
     
     return batch_tokens, token_probs, decoded_output
 
@@ -183,20 +193,20 @@ if __name__ == '__main__':
     warnings.filterwarnings('ignore')
     
     # debug
-    model, tokenizer = load_hf_model("/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/",)
+    model, tokenizer = load_hf_model("/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama3-ft",)
     
     prompts = [
-    "Once upon a time,",
-    "In a galaxy far, far away,",
-    "Artificial intelligence can",
-    "The future of technology",
-    "hi"
+    # "Once upon a time,",
+    # "In a galaxy far, far away,",
+    # "Artificial intelligence can",
+    # "The future of technology",
+    "Let G be a group of order 35. What can be said about G?  Answer Choices: (A) G must be abelian. (B) G must be cyclic. (C) G must be a direct product of cyclic groups. (D) G cannot be cyclic."
     ]
     
     tokens, token_probs, decode_output = batch_generation(model=model, 
                                                           tokenizer=tokenizer, 
                                                           prompt=prompts,
-                                                          max_new_tokens=16)
+                                                          max_new_tokens=32)
     print(tokens)
     print(token_probs)
     print(decode_output)

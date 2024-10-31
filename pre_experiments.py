@@ -10,6 +10,7 @@ import seaborn as sns
 import transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel, PeftConfig
+from datasets import load_from_disk
 
 from test_prompt import *
 from metrics import *
@@ -17,7 +18,7 @@ from model_list import *
 
 import logging
 logging.basicConfig(level=logging.INFO,
-                    filename='example5.log',
+                    filename='0.log',
                     filemode='a',
                     format='%(message)s'
                     )
@@ -221,8 +222,11 @@ def distance_matrix_plot(result_dict,
     plt.show()
 
 if __name__ == '__main__':
+    
+    optimized_trigger_set = load_from_disk('./data/optimized_trigger_set')
+    data = list(set(optimized_trigger_set['prompt']))
 
-    prompt = EXAMPLE_3
+    prompt = data[0]
     # prompt = "After negotiating for the price of a phone, Karsyn bought a phone at 20% of the initial price. If the phone's initial price was $600, calculate how much she paid after negotiating."
     
     # id_list_0, token_probs_0 = extract_fingerprint(model_name_or_path_0, prompt)
@@ -233,6 +237,6 @@ if __name__ == '__main__':
     
     result_dict = get_distance_matrix(seed_prompt=prompt)
     # print(distance_matrix)
-    distance_matrix_plot(result_dict, "test_5.png")
+    distance_matrix_plot(result_dict, "0.png")
     
     # trace_plot(token_probs, model_name_or_path)
