@@ -1,4 +1,5 @@
-MODEL_LIST = ["/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/",
+MODEL_LIST = [
+              "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/",
               "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama3-ft",
               "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B-Instruct/",
               "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama3-instruct-ft",
@@ -15,8 +16,8 @@ MODEL_LIST = ["/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/",
               "/mnt/data/yuliangyan/Qwen/Qwen2.5-7B/",
               "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/qwen25-ft",
               "/mnt/data/yuliangyan/microsoft/Phi-3-medium-4k-instruct",
-              "/mnt/data/yuliangyan/google/gemma-2-2b",
-              "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/gemma2-ft",
+            #   "/mnt/data/yuliangyan/google/gemma-2-2b",
+            #   "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/gemma2-ft",
               ]
 
 MODEL_LABEL = ["llama3",

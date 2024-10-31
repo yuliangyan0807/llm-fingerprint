@@ -146,7 +146,11 @@ def batch_generation(
         output = model.generate(**generation_input)
 
     gen_sequences = output.sequences[:, input_ids.shape[-1]:] # token_ids: (batch_size, max_gen_length)
-    decoded_output = [tokenizer.decode(ids) for ids in gen_sequences] # texts: (batch_size, text_length))
+    try:
+        decoded_output = [tokenizer.decode(ids) for ids in gen_sequences] # texts: (batch_size, text_length))
+    except Exception as e:
+        decoded_output = ["" for _ in range(len(gen_sequences))]
+        pass
     
     # attention mask for filtering the padding tokens
     attention_mask = torch.where(gen_sequences == 0, 0, 1)
@@ -178,7 +182,7 @@ def batch_generation(
                     continue
             else:
                 continue
-    
+     # some bugs with gemma2       
     batch_tokens = []
     for token_ids in gen_sequences:
         tokens = []

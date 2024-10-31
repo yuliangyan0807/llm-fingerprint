@@ -8,6 +8,7 @@ from tqdm import tqdm
 from typing import List
 from utils import *
 from datasets import load_from_disk, Dataset
+import warnings
 
 def pre_generate_trajectory(
     model_list: List[str],
@@ -51,8 +52,7 @@ def pre_generate_trajectory(
         labels = labels + model_label
     
     print(f"saving dataset...")
-    optimized_trigger_set = {"prompt": prompts,
-                             "tokens": tokens_,
+    optimized_trigger_set = {"tokens": tokens_,
                              "token_probs": token_probs_,
                              "decode_output": decode_output_,
                              "entropy": entropy_,
@@ -172,6 +172,7 @@ def optimize_prompts_with_pair_sampling(trigger_set,
     return prompts
 
 if __name__ == '__main__':
+    warnings.filterwarnings('ignore')
     # Example usage
     # seed_trigger_set = load_from_disk("./data/seed_trigger_set")
     # print(len(seed_trigger_set))
