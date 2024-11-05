@@ -10,6 +10,7 @@ from utils import *
 from datasets import load_from_disk, Dataset
 import warnings
 from itertools import combinations
+from transformers import set_seed
 
 def pre_generate_trajectory(
     model_list: List[str],
@@ -100,6 +101,7 @@ def optimize_prompts_with_pair_sampling(
     """
     print(f"loading dataset...")
     trigger_set = load_from_disk('./data/optimized_trigger')
+    original_trigger_set = load_from_disk('./data/seed_trigger_set')
     # get the number of models
     model_number = len(model_list)
     prompt_number = len(trigger_set) // model_number
@@ -144,7 +146,10 @@ def optimize_prompts_with_pair_sampling(
     assert len(prompt_probs) == prompt_number, "length error!"
 
     # Sample prompts indices based on their importance weights
-    candidate_prompts_indices = random.choices(range(prompt_number), weights=prompt_probs, k=sample_size)
+    candidate_prompts_indices = random.choices(range(prompt_number), 
+                                              weights=prompt_probs, 
+                                              k=sample_size)
+    candidate_prompts_indices = list(set(candidate_prompts_indices))
     prompt_scores = []
 
     print(f"start to search the final trigger set")
@@ -176,26 +181,33 @@ def optimize_prompts_with_pair_sampling(
         # Based on the entropy, we expect the intra score is low.
         score = beta * inter_socre - alpha * intra_score
         prompt_scores.append((i, score))
-
+        
+    assert len(prompt_scores) == len(candidate_prompts_indices)
+    
     # Sort and select the top M prompts
-    optimized_prompts = sorted(prompt_scores, key=lambda x: x[1], reverse=True)[:M]
-    indices = [i for i, score in optimized_prompts]
-    optimized_data = trigger_set.select(indices=indices)
+    optimized_prompts_indices = sorted(prompt_scores, key=lambda x: x[1], reverse=True)[:M]
+    indices = [i for i, score in optimized_prompts_indices]
+    prompts = original_trigger_set.select(indices)['prompt']
+    data = {"prompt" : prompts}
+    data = Dataset.from_dict(data)
     
-    optimized_data.save_to_disk('./data/final_trigger_set')
+    data.save_to_disk('./data/final_trigger_set')
     
-    return optimized_data
+    return data
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
     
-    model_list = MODEL_LIST
+    # model_list = MODEL_LIST
 
     # Find optimized prompts
-    optimized_prompts = optimize_prompts_with_pair_sampling(
-                                                        model_list=model_list, 
-                                                        M=50, 
-                                                        sample_size=150, 
-                                                        alpha=0.3, 
-                                                        beta=0.7,
-                                                        )
+    # optimized_prompts = optimize_prompts_with_pair_sampling(
+    #                                                     model_list=model_list, 
+    #                                                     M=64, 
+    #                                                     sample_size=200, 
+    #                                                     alpha=0.3, 
+    #                                                     beta=0.7,
+    #                                                     )
+    
+    data = load_from_disk('./data/final_trigger_set')
+    print(len(data))

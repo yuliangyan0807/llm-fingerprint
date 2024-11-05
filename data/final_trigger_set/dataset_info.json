@@ -2,37 +2,8 @@
   "citation": "",
   "description": "",
   "features": {
-    "tokens": {
-      "feature": {
-        "dtype": "string",
-        "_type": "Value"
-      },
-      "_type": "Sequence"
-    },
-    "token_probs": {
-      "feature": {
-        "dtype": "float64",
-        "_type": "Value"
-      },
-      "_type": "Sequence"
-    },
-    "decode_output": {
+    "prompt": {
       "dtype": "string",
-      "_type": "Value"
-    },
-    "entropy": {
-      "feature": {
-        "dtype": "float64",
-        "_type": "Value"
-      },
-      "_type": "Sequence"
-    },
-    "mean_entropy": {
-      "dtype": "float64",
-      "_type": "Value"
-    },
-    "label": {
-      "dtype": "int64",
       "_type": "Value"
     }
   },
