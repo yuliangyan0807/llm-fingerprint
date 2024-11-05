@@ -238,11 +238,13 @@ def train():
         cache_dir=training_args.cache_dir,
         )
     
+    print(model)
+    
     # lora config
     lora_modules = [
-        "q_proj",
+        # "q_proj",
         # "k_proj",
-        "v_proj",
+        # "v_proj",
         "o_proj",
         # "up_proj",
         # "gate_proj",

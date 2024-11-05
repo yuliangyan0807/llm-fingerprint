@@ -5,7 +5,7 @@ torchrun --nproc_per_node=4  finetuning.py \
     --output_dir "./instruction_tuning_models/phi3-instruct-ft" \
     --lora_rank 4 \
     --num_train_epochs 3 \
-    --per_device_train_batch_size 4 \
+    --per_device_train_batch_size 2 \
     --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 8 \
     --evaluation_strategy "no" \

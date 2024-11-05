@@ -182,7 +182,7 @@ def batch_generation(
                     continue
             else:
                 continue
-     # some bugs with gemma2       
+    # some bugs with gemma2       
     batch_tokens = []
     for token_ids in gen_sequences:
         tokens = []
