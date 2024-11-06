@@ -25,7 +25,7 @@ MODEL_LIST = [
 MODEL_LABEL = ["llama3",
                "llama3-ft",
                "llama3-instruct",
-               "llama3-instruct-ft"
+               "llama3-instruct-ft",
                "llama3.1",
                "llama3.1-ft",
                "llama3.1-instruct",
