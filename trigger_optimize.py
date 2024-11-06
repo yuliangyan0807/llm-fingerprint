@@ -61,23 +61,6 @@ def pre_generate_trajectory(
     optimized_trigger_set = Dataset.from_dict(optimized_trigger_set)
     optimized_trigger_set.save_to_disk('./data/optimized_trigger_set')
 
-# Hypothetical metric functions
-def compute_intra_model_similarity(tokens1, tokens2):
-    """
-    Calculates similarity between model and fine-tuned model outputs for a given prompt.
-    """
-    
-    res = jaccard_similarity(tokens1, tokens2)
-    
-    return res
-
-def compute_inter_model_divergence(tokens1, tokens2):
-    """Calculates divergence between two different models' outputs for a given prompt."""
-    
-    res = jaccard_similarity(tokens1, tokens2)
-    
-    return res
-
 def optimize_prompts_with_pair_sampling( 
                                         model_list, 
                                         M=10, 
