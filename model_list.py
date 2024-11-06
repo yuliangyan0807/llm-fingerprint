@@ -29,6 +29,7 @@ MODEL_LABEL = ["llama3",
                "llama3.1",
                "llama3.1-ft",
                "llama3.1-instruct",
+               "llama3.1-instruct-ft",
                "mistral",
                "mistral-ft",
                "deepseek",
@@ -36,11 +37,12 @@ MODEL_LABEL = ["llama3",
                "deepseek-chat",
                "deepseek-chat-ft",
                "deepseek-math",
+               "deepseek-math-ft",
                "qwen2.5",
                "qwen2.5-ft",
-               "phi3",
-               "gemma2",
-               "gemma2-ft"
+              #  "phi3",
+              #  "gemma2",
+              #  "gemma2-ft"
                ]
 # TODO
 # gemmma-2

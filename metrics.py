@@ -39,7 +39,7 @@ def weighted_edit_distance(s1, s2, conf1, conf2):
 
     return dp[m][n]
 
-def jaccard_similarity(tokens1, tokens2):
+def compute_jaccard_similarity(tokens1, tokens2):
     
     set1 = set(tokens1)
     set2 = set(tokens2)
@@ -54,14 +54,14 @@ def compute_intra_model_similarity(tokens1, tokens2):
     Calculates similarity between model and fine-tuned model outputs for a given prompt.
     """
     
-    res = jaccard_similarity(tokens1, tokens2)
+    res = compute_jaccard_similarity(tokens1, tokens2)
     
     return res
 
 def compute_inter_model_divergence(tokens1, tokens2):
     """Calculates divergence between two different models' outputs for a given prompt."""
     
-    res = jaccard_similarity(tokens1, tokens2)
+    res = compute_jaccard_similarity(tokens1, tokens2)
     
     return res
 

@@ -7,6 +7,7 @@ import numpy as np
 from tqdm import tqdm
 from model_list import *
 from datasets import load_from_disk
+from fig_plot import *
 
 def evaluate(
     trigger_set,
@@ -50,18 +51,26 @@ def evaluate(
             assert len(tokens1) == len(token_probs1), "length error!"
             
             edit_distacne.append(weighted_edit_distance(tokens1, tokens2, token_probs1, token_probs2))
-            jaccard_similarity.append(jaccard_similarity(tokens1, tokens2))
+            jaccard_similarity.append(compute_jaccard_similarity(tokens1, tokens2))
             entropy_simlarity.append(abs(mean_entropy1 - mean_entropy2))
         
         # Compute the mean value of each fingerprint.
         l = len(batch_tokens1)
-        v1, v2, v3 = sum(edit_distacne) / l, jaccard_similarity / l, entropy_simlarity / l
+        v1, v2, v3 = sum(edit_distacne) / l, sum(jaccard_similarity) / l, sum(entropy_simlarity) / l
         edit_distance_matrix[i][j], jaccard_simlarity_matrix[i][j], entropy_simlarity_matrix[i][j] = v1, v2, v3
         edit_distance_matrix[j][i], jaccard_simlarity_matrix[j][i], entropy_simlarity_matrix[j][i] = v1, v2, v3
-        
-    return edit_distance_matrix, jaccard_simlarity_matrix, entropy_simlarity_matrix
+    
+    res = {'edit_distance_matrix' : edit_distance_matrix,
+           'jaccard_simlarity_matrix' : jaccard_simlarity_matrix,
+           'entropy_simlarity_matrix' : entropy_simlarity_matrix,
+           }
+    
+    return res
             
 
 if __name__ == '__main__':
     trigger_set = load_from_disk('./data/final_trigger_set')
-    x, y, z = evaluate(trigger_set=trigger_set, model_list=MODEL_LIST)
+    res = evaluate(trigger_set=trigger_set, model_list=MODEL_LIST)
+    
+    distance_matrix_plot(result_dict=res,
+                         save_dir='result.png')
