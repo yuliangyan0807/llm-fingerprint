@@ -24,8 +24,11 @@
 
 ## Data
 Contains datasets used for training and evaluation.
+
 seed_trigger_set: contains 600 prompt.
+
 trajectory_set: record LLM's output towards the seed trigger set. It contains 'tokens', 'prompt', 'output', 'token probs', 'mean_entropy', 'entropy'.
+
 final_trigger_set: We use the optimization method to obtain a subset of the seed trigger set.
 
 ## dpo_tuning_models
