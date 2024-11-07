@@ -136,6 +136,17 @@ if __name__ == '__main__':
     
     tokenizer = AutoTokenizer.from_pretrained('google-t5/t5-base')
     tokenized_dataset = construct_contrastive_dataset(tokenizer=tokenizer)
-    print(len(tokenized_dataset[2]['input_ids']))
+    print(len(tokenized_dataset))
     
+    model = AutoModelForSequenceClassification.from_pretrained("google-t5/t5-base")
+    # print(model)
+    input_ids = tokenized_dataset[0]['input_ids']
+    attention_mask = tokenized_dataset[0]['attention_mask']
+    input = {
+        'input_ids' : torch.tensor(input_ids),
+        'attention_mask' : torch.tensor(attention_mask)
+    }
+    output = model(**input)
+    print(output)
+    # print(output.last_hidden_states)
     # train()

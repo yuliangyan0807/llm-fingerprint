@@ -151,25 +151,32 @@ def construct_contrastive_dataset(
         tokenizer(
             text,
             return_tensors="pt",
-            padding="longest",
+            padding="max_length",
             max_length=128,
             truncation=True,
         )
         for text in contrastive_dataset
     ]
     input_ids = [tokenized.input_ids[0] for tokenized in tokenized_list]
+    attention_mask = [input_id.ne(tokenizer.pad_token_id) for input_id in input_ids]
     assert len(input_ids) == len(raw_data), "length error!"
     
-    tokenized_contrastive_dataset= []    
+    tokenized_contrastive_dataset= []
+    attention_masks = []    
     for i in range(prompt_number):
         samples = []
+        attn = []
         select_indices = [k * prompt_number + i for k in range(model_number)]
         for j in select_indices:
             samples.append(input_ids[j])
+            attn.append(attention_mask[j])
         tokenized_contrastive_dataset.append(samples)
+        attention_masks.append(attn)
     
     assert len(tokenized_contrastive_dataset) == prompt_number, "error!"
-    data = {'input_ids' : tokenized_contrastive_dataset}
+    data = {'input_ids' : tokenized_contrastive_dataset,
+            'attention_mask' : attention_masks,
+            }
     dataset = Dataset.from_dict(data)
     # dataset.save_to_disk('./data/contrastive_set')
     
