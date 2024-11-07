@@ -21,12 +21,9 @@ from evaluate import load
 
 # ds = load_dataset("Intel/orca_dpo_pairs")
 
-ds = load_from_disk('./data/optimized_trigger_set')
-# print(len(ds))
-# for i in range(len(ds)):
-#     print(ds[i]['prompt'])
+# Load model directly
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, AutoModelForSequenceClassification
 
-ds = set([data['prompt'] for data in ds])
-print(len(ds))
-for data in ds:
-    print(data)
+tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-base")
+model = AutoModelForSequenceClassification.from_pretrained("google-t5/t5-base")
+print(model)

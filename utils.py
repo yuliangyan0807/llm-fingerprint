@@ -1,7 +1,14 @@
 import torch
+import torch.distributed as dist
+import transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel, PeftConfig
 import os
+from datasets import Dataset, load_from_disk
+import random
+from model_list import *
+from typing import Sequence, Dict
+from tqdm import tqdm
 
 def load_hf_model(model_name_or_path, 
                   generation_mode=False,
@@ -77,3 +84,93 @@ def load_hf_model(model_name_or_path,
     except Exception as e:
         print(f"Error loading model: {e}")
         return None, None
+    
+def create_contrastive_samples(data, num_negatives=3):
+    """
+    Constructs contrastive learning samples for each data point.
+    
+    Parameters:
+    - data: List of dictionaries with 'input_text' and 'label'.
+    - num_negatives: Number of negative samples per anchor.
+    
+    Returns:
+    - A new dataset with (anchor, positive, negative) structure.
+    """
+    contrastive_samples = []
+    
+    # Organize data by class
+    class_data = {}
+    for item in data:
+        label = item['label']
+        if label not in class_data:
+            class_data[label] = []
+        class_data[label].append(item['input_text'])
+
+    # Generate contrastive samples
+    for item in data:
+        anchor_text = item['input_text']
+        label = item['label']
+
+        # Sample a positive example from the same class
+        positive_text = random.choice([x for x in class_data[label] if x != anchor_text])
+
+        # Sample negative examples from other classes
+        negative_texts = []
+        other_labels = [l for l in class_data if l != label]
+        for _ in range(num_negatives):
+            neg_label = random.choice(other_labels)
+            negative_texts.append(random.choice(class_data[neg_label]))
+
+        contrastive_samples.append({
+            'anchor': anchor_text,
+            'positive': positive_text,
+            'negatives': negative_texts,
+            'label': label,
+        })
+
+    return Dataset.from_list(contrastive_samples)
+
+def construct_contrastive_dataset(
+    tokenizer: transformers.PreTrainedTokenizer,
+    ):
+    
+    model_number = len(MODEL_LIST)
+    raw_data = load_from_disk('./data/trajectory_set')
+    prompt_number = len(raw_data) // model_number
+    
+    template = "Prompt: {}<SEP>Output: {}<SEP>Mean Entropy: {}."
+    contrastive_dataset = []
+    print(f"Contructing the dataset for contrastive learning...")
+    for i in tqdm(range(len(raw_data))):
+        prompt = raw_data[i]['prompt']
+        output = raw_data[i]['output']
+        mean_entropy = str(raw_data[i]['mean_entropy'])
+        contrastive_dataset.append(template.format(prompt, output, mean_entropy))
+    print(f"Tokenizing the dataset...")
+    tokenized_list = [
+        tokenizer(
+            text,
+            return_tensors="pt",
+            padding="longest",
+            max_length=128,
+            truncation=True,
+        )
+        for text in contrastive_dataset
+    ]
+    input_ids = [tokenized.input_ids[0] for tokenized in tokenized_list]
+    assert len(input_ids) == len(raw_data), "length error!"
+    
+    tokenized_contrastive_dataset= []    
+    for i in range(prompt_number):
+        samples = []
+        select_indices = [k * prompt_number + i for k in range(model_number)]
+        for j in select_indices:
+            samples.append(input_ids[j])
+        tokenized_contrastive_dataset.append(samples)
+    
+    assert len(tokenized_contrastive_dataset) == prompt_number, "error!"
+    data = {'input_ids' : tokenized_contrastive_dataset}
+    dataset = Dataset.from_dict(data)
+    # dataset.save_to_disk('./data/contrastive_set')
+    
+    return dataset
