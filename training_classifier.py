@@ -1,9 +1,10 @@
 import torch
+import torch.nn.functional as F
 import transformers
-from transformers import AutoModelForSequenceClassification, AdamW
+from transformers import AutoModelForSequenceClassification, AdamW, set_seed
 from datasets import load_from_disk
 from transformers import DataCollatorWithPadding
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Sequence
 
@@ -46,70 +47,64 @@ class TrainingArguments(transformers.TrainingArguments):
         default=32
     )
 
-
-# Tokenize the dataset
-def tokenize_function(batch, tokenizer: transformers.PreTrainedTokenizer):
-    # Tokenize anchor and positive, then tokenize each negative sample individually
-    anchor_encodings = tokenizer(batch['anchor'], padding="max_length", truncation=True, max_length=128, return_tensors="pt")
-    positive_encodings = tokenizer(batch['positive'], padding="max_length", truncation=True, max_length=128, return_tensors="pt")
-    negative_encodings = [tokenizer(neg, padding="max_length", truncation=True, max_length=128, return_tensors="pt") for neg in batch['negatives']]
-
-    return {
-        'anchor_input_ids': anchor_encodings['input_ids'],
-        'anchor_attention_mask': anchor_encodings['attention_mask'],
-        'positive_input_ids': positive_encodings['input_ids'],
-        'positive_attention_mask': positive_encodings['attention_mask'],
-        'negative_input_ids': [ne['input_ids'] for ne in negative_encodings],
-        'negative_attention_mask': [ne['attention_mask'] for ne in negative_encodings],
-    }
-
-class ContrastiveDataCollator:
-    def __init__(self, tokenizer):
-        self.data_collator = DataCollatorWithPadding(tokenizer)
-
-    def __call__(self, batch):
-        anchor_batch = [{'input_ids': item['anchor_input_ids'], 'attention_mask': item['anchor_attention_mask']} for item in batch]
-        positive_batch = [{'input_ids': item['positive_input_ids'], 'attention_mask': item['positive_attention_mask']} for item in batch]
+class ContrastiveTrainer(transformers.Trainer):
+    
+    def compute_loss(self, 
+                     model, 
+                     inputs,
+                     temperature, 
+                    #  return_outputs=False,
+                     ):
+        """
+        inputs: (batch_size, 18, seq).
+        """
+        total_loss = 0.0
+        count = 0
+        for sample in inputs:
+            count += 1
+            # sample: (18, seq_length)
+            input_ids = sample['input_ids']
+            attention_mask = sample['attention_mask']
+            model_intpus = {
+                "input_ids" : torch.tensor(input_ids).to(model.device),
+                "attention_mask" : torch.tensor(attention_mask).to(model.device),
+            }
+            hidden_states = model(**model_intpus).encoder_last_hidden_state # (18, seq_length, hidden_dim)
+            # Aggeragate the hidden states.
+            aggeragated_hidden_states = torch.sum(hidden_states, dim=1) # (18, hidden_dim)
+            # aggeragated_hidden_states = hidden_states[:, 0, :] # (18, hidden_dim)
+            aggeragated_hidden_states = F.normalize(aggeragated_hidden_states, p=2, dim=-1).to(model.device)
+            similarity_matrix = torch.matmul(aggeragated_hidden_states, aggeragated_hidden_states.T) / temperature # (18, 18)
+            model_number = similarity_matrix.size(0)
+            positive_mask = torch.zeros_like(similarity_matrix, dtype=torch.bool)
+            for i in range(0, model_number, 2):
+                positive_mask[i][i + 1] = 1
+                positive_mask[i + 1][i] = 1
+            
+            # Mask out diagonal (self-similarity)
+            diagonal_mask = torch.eye(model_number, dtype=torch.bool).to(model.device)
+            similarity_matrix.masked_fill_(diagonal_mask, float('inf'))
+            
+            # Apply log-softmax across rows
+            logits = F.log_softmax(similarity_matrix, dim=1)
+            
+            # Only select positive logits
+            positive_logits = logits[positive_mask]
+            
+            # Calculate the contrastive loss for positive pairs
+            loss = -positive_logits.mean()
+            total_loss += loss
         
-        # Collate negative samples separately
-        negative_batches = []
-        for i in range(len(batch[0]['negative_input_ids'])):
-            negative_batch = [{'input_ids': item['negative_input_ids'][i], 'attention_mask': item['negative_attention_mask'][i]} for item in batch]
-            negative_batches.append(self.data_collator(negative_batch))
-
-        # Collate anchor and positive samples
-        anchor = self.data_collator(anchor_batch)
-        positive = self.data_collator(positive_batch)
-
-        return {
-            'anchor': anchor,
-            'positive': positive,
-            'negatives': negative_batches  # List of collated negative batches
-        }
-
-class CustomTrainer(transformers.Trainer):
-    def compute_loss(self, model, inputs, return_outputs=False):
-        labels = inputs.pop("labels")
-        # forward pass
-        outputs = model(**inputs)
-        logits = outputs.get("logits")
-        # compute custom loss (suppose one has 3 labels with different weights)
-        loss_fct = torch.nn.CrossEntropyLoss(weight=torch.tensor([1.0, 2.0, 3.0], device=model.device))
-        loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
-        return (loss, outputs) if return_outputs else loss
+        return total_loss / count
 
 def train():
+    
+    set_seed(42)
+    
     parser = transformers.HfArgumentParser(
         (ModelArguments, DataArguments, TrainingArguments)
     )
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
-    
-    # data = load_from_disk('./data/trajectory_set')
-    data = load_from_disk(data_args.data_path)
-    contrastive_dataset = create_contrastive_samples(data=data)
-    
-    # Apply tokenization to the dataset
-    tokenized_dataset = contrastive_dataset.map(tokenize_function, batched=True)
     
     model = AutoModelForSequenceClassification.from_pretrained(model_args.model_name_or_path,
                                                                num_labels=model_args.num_labels,
@@ -117,28 +112,37 @@ def train():
     tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path,
                                               )
     
-    # Instantiate the data collator
-    data_collator = ContrastiveDataCollator(tokenizer)
+    contrastive_dataset = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer))
+    data_collator = DataCollatorForContrastiveDataset(tokenizer=tokenizer)
     
-    # Create DataLoaders for each split
-    train_loader = DataLoader(tokenized_dataset['train'], batch_size=16, shuffle=True, collate_fn=data_collator)
-    val_loader = DataLoader(tokenized_dataset['validation'], batch_size=16, shuffle=False, collate_fn=data_collator)
-    test_loader = DataLoader(tokenized_dataset['test'], batch_size=16, shuffle=False, collate_fn=data_collator)
+    train_size = int(0.9 * len(contrastive_dataset))
+    test_size = len(dataset) - train_size
+    train_dataset, test_dataset = random_split(contrastive_dataset, [train_size, test_size])
     
-    optimizer = AdamW(model.parameters(), lr=5e-5)
+    trainer = ContrastiveTrainer(
+        model=model,
+        tokenizer=tokenizer,
+        args=training_args,
+        data_collator=data_collator,
+        train_dataset=train_dataset
+    )
+    
+    trainer.train()
+    
+    trainer.model.save_pretrained(training_args.output_dir)
+    tokenizer.save_pretrained(training_args.output_dir)
 
 if __name__ == '__main__':
-
-    dataset = load_from_disk('./data/contrastive_set')
-    dataset = dataset.select(range(0, 4))
-    # print(len(dataset))
-    # print(dataset[10])
     
     tokenizer = AutoTokenizer.from_pretrained('google-t5/t5-base')
     tokenized_dataset = construct_contrastive_dataset(tokenizer=tokenizer)
     print(len(tokenized_dataset))
     
-    model = AutoModelForSequenceClassification.from_pretrained("google-t5/t5-base")
+    dataset = ContrastiveDataset(raw_dataset=tokenized_dataset)
+    data_collator = DataCollatorForContrastiveDataset(tokenizer=tokenizer)
+    
+    model = AutoModelForSequenceClassification.from_pretrained("google-t5/t5-base",
+                                                               output_hidden_states=True)
     # print(model)
     input_ids = tokenized_dataset[0]['input_ids']
     attention_mask = tokenized_dataset[0]['attention_mask']
@@ -146,7 +150,17 @@ if __name__ == '__main__':
         'input_ids' : torch.tensor(input_ids),
         'attention_mask' : torch.tensor(attention_mask)
     }
+    print(input['input_ids'].shape) # (batch_size, 18, seq_length)
     output = model(**input)
-    print(output)
+    print(output.encoder_last_hidden_state)
+    print(attention_mask)
+    print(output.encoder_last_hidden_state.shape)
+    aggeragated_hidden_states = torch.sum(output.encoder_last_hidden_state, dim=1) # (18, hidden_dim)
+    print(aggeragated_hidden_states.shape)
+    aggeragated_hidden_states = F.normalize(aggeragated_hidden_states, p=2, dim=-1)
+    similarity_matrix = torch.matmul(aggeragated_hidden_states, aggeragated_hidden_states.T)
+    print(similarity_matrix)
+    print(similarity_matrix.shape[0])
+    
     # print(output.last_hidden_states)
-    # train()
+    train()

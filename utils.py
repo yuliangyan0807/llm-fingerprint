@@ -9,6 +9,8 @@ import random
 from model_list import *
 from typing import Sequence, Dict
 from tqdm import tqdm
+from torch.utils.data import Dataset as ds
+from dataclasses import dataclass, field
 
 def load_hf_model(model_name_or_path, 
                   generation_mode=False,
@@ -158,7 +160,8 @@ def construct_contrastive_dataset(
         for text in contrastive_dataset
     ]
     input_ids = [tokenized.input_ids[0] for tokenized in tokenized_list]
-    attention_mask = [input_id.ne(tokenizer.pad_token_id) for input_id in input_ids]
+    # attention_mask = [input_id.ne(tokenizer.pad_token_id) for input_id in input_ids]
+    attention_mask = [tokenized.attention_mask for tokenized in tokenized_list]
     assert len(input_ids) == len(raw_data), "length error!"
     
     tokenized_contrastive_dataset= []
@@ -181,3 +184,40 @@ def construct_contrastive_dataset(
     # dataset.save_to_disk('./data/contrastive_set')
     
     return dataset
+
+class ContrastiveDataset(ds):
+
+    def __init__(self, 
+                 raw_dataset,
+                 ) -> None:
+        super().__init__()
+        self.raw_dataset = raw_dataset
+
+    def __len__(self):
+        
+        return len(self.raw_dataset)
+
+    def __getitem__(self, idx):
+        
+        return {
+            "input_ids":
+            self.raw_dataset[idx]["input_ids"],
+            "attention_mask":
+            self.raw_dataset[idx]["attention_mask"],
+        }
+
+@dataclass
+class DataCollatorForContrastiveDataset(object):
+    """Collate examples for supervised fine-tuning."""
+
+    tokenizer: transformers.PreTrainedTokenizer
+
+    def __call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
+        input_ids, attention_mask = tuple(
+            [instance[key] for instance in instances] for key in ("input_ids", "attention_mask")
+        )
+        
+        return dict(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+        )
