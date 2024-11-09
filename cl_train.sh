@@ -3,14 +3,15 @@ torchrun --nproc_per_node=4  training_classifier.py \
     --data_path "./data/trajectory_set" \
     --bf16 True \
     --output_dir "./metric_learning_models/test_1109" \
-    --num_train_epochs 50 \
+    --run_name 'llm-fingerprint-1109' \
+    --num_train_epochs 5000 \
     --per_device_train_batch_size 16 \
     --per_device_eval_batch_size 4 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
     --save_steps 2000 \
     --save_total_limit 1 \
-    --learning_rate 2e-5 \
+    --learning_rate 1e-4 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
     --lr_scheduler_type "cosine" \

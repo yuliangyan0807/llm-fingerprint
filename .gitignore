@@ -2,3 +2,4 @@
 **/logs
 **/figs
 **/instruction_tuning_models
+**/wandb/

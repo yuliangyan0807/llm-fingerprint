@@ -95,7 +95,7 @@ class ContrastiveTrainer(transformers.Trainer):
             # Calculate the contrastive loss for positive pairs
             loss = -positive_logits.mean()
             total_loss += loss
-        print(total_loss / count)
+
         return total_loss / count
 
 def train():
