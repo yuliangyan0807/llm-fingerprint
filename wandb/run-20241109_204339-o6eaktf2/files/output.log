@@ -1,0 +1,95 @@
+                                                                                                                                                                           
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.4285714285714286e-06, 'epoch': 0.11}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 2.8571428571428573e-06, 'epoch': 0.22}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 4.2857142857142855e-06, 'epoch': 0.33}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 5.7142857142857145e-06, 'epoch': 0.44}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 7.1428571428571436e-06, 'epoch': 0.56}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 8.571428571428571e-06, 'epoch': 0.67}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1e-05, 'epoch': 0.78}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.1428571428571429e-05, 'epoch': 0.89}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.2857142857142859e-05, 'epoch': 1.0}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.4285714285714287e-05, 'epoch': 1.11}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.5714285714285715e-05, 'epoch': 1.22}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.7142857142857142e-05, 'epoch': 1.33}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.8571428571428575e-05, 'epoch': 1.44}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 2e-05, 'epoch': 1.56}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9999740405855478e-05, 'epoch': 1.67}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9998961636899736e-05, 'epoch': 1.78}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9997663733565537e-05, 'epoch': 1.89}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9995846763238514e-05, 'epoch': 2.0}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.999351082025363e-05, 'epoch': 2.11}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9990656025890315e-05, 'epoch': 2.22}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9987282528366147e-05, 'epoch': 2.33}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9983390502829168e-05, 'epoch': 2.44}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.997898015134878e-05, 'epoch': 2.56}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.997405170290528e-05, 'epoch': 2.67}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9968605413377924e-05, 'epoch': 2.78}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9962641565531694e-05, 'epoch': 2.89}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9956160469002584e-05, 'epoch': 3.0}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.994916246028154e-05, 'epoch': 3.11}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9941647902696975e-05, 'epoch': 3.22}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9933617186395917e-05, 'epoch': 3.33}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9925070728323758e-05, 'epoch': 3.44}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9916008972202586e-05, 'epoch': 3.56}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9906432388508176e-05, 'epoch': 3.67}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9896341474445526e-05, 'epoch': 3.78}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9885736753923084e-05, 'epoch': 3.89}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.987461877752552e-05, 'epoch': 4.0}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9862988122485145e-05, 'epoch': 4.11}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.985084539265195e-05, 'epoch': 4.22}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.983819121846225e-05, 'epoch': 4.33}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.982502625690595e-05, 'epoch': 4.44}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.981135119149243e-05, 'epoch': 4.56}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9797166732215078e-05, 'epoch': 4.67}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9782473615514403e-05, 'epoch': 4.78}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9767272604239823e-05, 'epoch': 4.89}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.9751564487610038e-05, 'epoch': 5.0}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.973535008117207e-05, 'epoch': 5.11}
+tensor(nan, device='cuda:0', grad_fn=<DivBackward0>)
+{'loss': 0.0, 'grad_norm': nan, 'learning_rate': 1.971863022675891e-05, 'epoch': 5.22}

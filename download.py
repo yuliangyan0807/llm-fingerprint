@@ -22,8 +22,7 @@ from evaluate import load
 # ds = load_dataset("Intel/orca_dpo_pairs")
 
 # Load model directly
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForMaskedLM
 
-tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-base")
-model = AutoModelForSequenceClassification.from_pretrained("google-t5/t5-base")
-print(model)
+tokenizer = AutoTokenizer.from_pretrained("FacebookAI/roberta-large")
+model = AutoModelForMaskedLM.from_pretrained("FacebookAI/roberta-large")
