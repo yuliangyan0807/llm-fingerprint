@@ -50,7 +50,6 @@ class ContrastiveTrainer(transformers.Trainer):
                      model, 
                      inputs,
                      temperature=0.5, 
-                    #  return_outputs=False,
                      ):
         """
         inputs: Dict{"input_ids", "attention_mask"}.

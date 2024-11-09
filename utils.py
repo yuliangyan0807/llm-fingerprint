@@ -86,55 +86,16 @@ def load_hf_model(model_name_or_path,
     except Exception as e:
         print(f"Error loading model: {e}")
         return None, None
-    
-def create_contrastive_samples(data, num_negatives=3):
-    """
-    Constructs contrastive learning samples for each data point.
-    
-    Parameters:
-    - data: List of dictionaries with 'input_text' and 'label'.
-    - num_negatives: Number of negative samples per anchor.
-    
-    Returns:
-    - A new dataset with (anchor, positive, negative) structure.
-    """
-    contrastive_samples = []
-    
-    # Organize data by class
-    class_data = {}
-    for item in data:
-        label = item['label']
-        if label not in class_data:
-            class_data[label] = []
-        class_data[label].append(item['input_text'])
-
-    # Generate contrastive samples
-    for item in data:
-        anchor_text = item['input_text']
-        label = item['label']
-
-        # Sample a positive example from the same class
-        positive_text = random.choice([x for x in class_data[label] if x != anchor_text])
-
-        # Sample negative examples from other classes
-        negative_texts = []
-        other_labels = [l for l in class_data if l != label]
-        for _ in range(num_negatives):
-            neg_label = random.choice(other_labels)
-            negative_texts.append(random.choice(class_data[neg_label]))
-
-        contrastive_samples.append({
-            'anchor': anchor_text,
-            'positive': positive_text,
-            'negatives': negative_texts,
-            'label': label,
-        })
-
-    return Dataset.from_list(contrastive_samples)
 
 def construct_contrastive_dataset(
     tokenizer: transformers.PreTrainedTokenizer,
     ):
+    """
+    Constructs contrastive learning samples for each data point.
+    
+    Returns:
+    - A new dataset with (input_ids, attention_mask) structure.
+    """
     
     model_number = len(MODEL_LIST)
     raw_data = load_from_disk('./data/trajectory_set')
