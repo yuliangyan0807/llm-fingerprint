@@ -83,6 +83,7 @@ class ContrastiveTrainer(transformers.Trainer):
             # Mask out diagonal (self-similarity)
             diagonal_mask = torch.eye(model_number, dtype=torch.bool).to(model.device)
             # similarity_matrix.masked_fill_(diagonal_mask, float('inf'))
+            # Notice that this may casue the overflow.
             similarity_matrix.masked_fill_(diagonal_mask, -1e-9)
             
             # Apply log-softmax across rows
