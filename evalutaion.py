@@ -13,6 +13,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import random_split, Subset
 
+@torch.no_grad()
 def evaluate(
     trigger_set,
     model_list: List[str],
@@ -71,6 +72,7 @@ def evaluate(
     
     return res
 
+@torch.no_grad()
 def evaluate_cl(
     test_trigger_set,
     model_name_or_path: str,
