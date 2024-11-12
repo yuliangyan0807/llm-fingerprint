@@ -77,26 +77,6 @@ if __name__ == '__main__':
         bnb_4bit_compute_dtype=torch.bfloat16,
     )
 
-    # model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16, quantization_config=bnb_config)
-    # model.config.use_cache = False
-    
-    # config = PeftConfig.from_pretrained(model_args.model_name_or_path, 
-    #                                     cache_dir=training_args.cache_dir,
-    #                                     )
-    # base_model = AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
-    #                                     cache_dir=training_args.cache_dir,
-    #                                             )
-    # model = PeftModel.from_pretrained(base_model, model_args.model_name_or_path, 
-    #                                     cache_dir=training_args.cache_dir,
-    #                                             )
-    # tokenizer = AutoTokenizer.from_pretrained(
-    #                                         model_args.model_name_or_path,
-    #                                         cache_dir=training_args.cache_dir,
-    #                                         model_max_length=3096,
-    #                                         padding_side="right",
-    #                                         use_fast=False,
-    #                                         trust_remote_code=True,
-    #                                         )
     model, tokenizer = load_hf_model(model_name_or_path=model_args.model_name_or_path,
                                      bnb_config=bnb_config)
     
@@ -118,24 +98,6 @@ if __name__ == '__main__':
         batched=True,
         remove_columns=original_columns
     )
-
-    # training_args = TrainingArguments(
-    #     per_device_train_batch_size=4,
-    #     gradient_accumulation_steps=4,
-    #     gradient_checkpointing =True,
-    #     max_grad_norm= 0.3,
-    #     num_train_epochs=15, 
-    #     save_steps= 100,
-    #     learning_rate=2e-4,
-    #     bf16=True,
-    #     save_total_limit=3,
-    #     logging_steps=10,
-    #     output_dir=output_dir,
-    #     optim="paged_adamw_32bit",
-    #     lr_scheduler_type="cosine",
-    #     warmup_ratio=0.05,
-    #     remove_unused_columns=False
-    # )
 
     peft_config = LoraConfig(
         r=training_args.lora_rank,

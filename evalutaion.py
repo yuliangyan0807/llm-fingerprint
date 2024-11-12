@@ -8,6 +8,9 @@ from tqdm import tqdm
 from model_list import *
 from datasets import load_from_disk
 from fig_plot import *
+from transformers import T5EncoderModel
+import torch
+import torch.nn.functional as F
 
 def evaluate(
     trigger_set,
@@ -66,8 +69,37 @@ def evaluate(
            }
     
     return res
-            
 
+def evaluate_cl(
+    test_trigger_set,
+    model_name_or_path: str,
+    batch_size: int,
+):  
+    model = T5EncoderModel.from_pretrained(
+        model_name_or_path,
+        output_hidden_states=True,
+        )
+    
+    l = len(test_trigger_set)
+    similarity_marices = [] # (len(test_trigger_set), 18, 18)
+    
+    for sample in test_trigger_set:
+        batch_input_ids = sample['input_ids'] # (18, seq_length)
+        batch_attention_mask = sample['attention_mask']
+        inputs = {
+            'input_ids' : batch_input_ids,
+            'attention_mask' : batch_attention_mask,
+        }
+        last_hidden_states = model(**inputs).last_hidden_states # (18, seq_length, hidden_states)
+        aggregated_hidden_states = torch.sum(last_hidden_states, dim=-1) # (18, hidden_states)
+        aggregated_hidden_states = F.normalize(aggregated_hidden_states, dim=-1)
+        similarity_marix = torch.matmul(aggregated_hidden_states, aggregated_hidden_states.T) # (18, 18)
+        similarity_marices.append(similarity_marix)   
+
+    mean_similarity_matrix = F.normalize(torch.sum(torch.tensor(similarity_marices), dim=0))
+    
+    return mean_similarity_matrix
+    
 if __name__ == '__main__':
     trigger_set = load_from_disk('./data/final_trigger_set')
     res = evaluate(trigger_set=trigger_set, model_list=MODEL_LIST)
