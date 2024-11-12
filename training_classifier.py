@@ -26,6 +26,7 @@ class DataArguments:
 class TrainingArguments(transformers.TrainingArguments):
     report_to: str = field(default="wandb")
     run_name: str = field(default='llm-fingerprint-1109')
+    max_grad_norm: str = field(default=1.0)
     cache_dir: Optional[str] = field(default=None)
     optim: str = field(
         # default="paged_adamw_32bit"
@@ -49,7 +50,7 @@ class ContrastiveTrainer(transformers.Trainer):
     def compute_loss(self, 
                      model, 
                      inputs,
-                     temperature=0.5, 
+                     temperature=0.2, 
                      ):
         """
         inputs: Dict{"input_ids", "attention_mask"}.
@@ -73,27 +74,40 @@ class ContrastiveTrainer(transformers.Trainer):
             # aggeragated_hidden_states = hidden_states[:, 0, :] # (18, hidden_dim)
             aggeragated_hidden_states = F.normalize(aggeragated_hidden_states, p=2, dim=-1)
             similarity_matrix = torch.matmul(aggeragated_hidden_states, aggeragated_hidden_states.T) / temperature # (18, 18)
-            model_number = similarity_matrix.size(0)
+                
+            num_samples = similarity_matrix.size(0)
             positive_mask = torch.zeros_like(similarity_matrix, dtype=torch.bool)
-            for i in range(0, model_number, 2):
+            for i in range(0, num_samples, 2):
                 positive_mask[i][i + 1] = 1
                 positive_mask[i + 1][i] = 1
-            
-            # Mask out diagonal (self-similarity)
-            diagonal_mask = torch.eye(model_number, dtype=torch.bool).to(model.device)
-            # similarity_matrix.masked_fill_(diagonal_mask, float('inf'))
-            # Notice that this may casue the overflow.
-            similarity_matrix.masked_fill_(diagonal_mask, -1e-9)
-            
-            # Apply log-softmax across rows
-            logits = F.log_softmax(similarity_matrix, dim=1)
-            
-            # Only select positive logits
-            positive_logits = logits[positive_mask]
-            
-            # Calculate the contrastive loss for positive pairs
-            loss = -positive_logits.mean()
+                
+            # Get positive pair (anchor, positive sample) similarities,
+            positive_logits = similarity_matrix[positive_mask]
+
+            # Mask out (anchor, positive sample) and (anchor, anchor) pairs for the denominator
+            denominator_mask = ~positive_mask & ~torch.eye(num_samples, dtype=torch.bool, device=similarity_matrix.device)
+            negative_logits = torch.exp(similarity_matrix[denominator_mask]).view(num_samples, -1) # (18, 16)
+
+            # Compute the InfoNCE loss
+            loss = -torch.log(torch.exp(positive_logits) / (torch.exp(positive_logits) + negative_logits.sum(dim=1)) + 1e-8).sum()
             total_loss += loss
+            
+            # # Mask out diagonal (self-similarity)
+            # diagonal_mask = torch.eye(model_number, dtype=torch.bool).to(model.device)
+            # # similarity_matrix.masked_fill_(diagonal_mask, float('inf'))
+            # # Notice that this may casue the overflow.
+            # similarity_matrix.masked_fill_(diagonal_mask, -1e9)
+            
+            # # Apply log-softmax across rows
+            # logits = F.log_softmax(similarity_matrix, dim=1)
+            
+            # # Only select positive logits
+            # positive_logits = logits[positive_mask]
+            
+            # # Calculate the contrastive loss for positive pairs
+            # # loss = -positive_logits.mean()
+            # loss = -positive_logits.sum()
+            # total_loss += loss
 
         return total_loss / count
 

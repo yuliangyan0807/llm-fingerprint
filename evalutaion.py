@@ -8,9 +8,10 @@ from tqdm import tqdm
 from model_list import *
 from datasets import load_from_disk
 from fig_plot import *
-from transformers import T5EncoderModel
+from transformers import T5EncoderModel, set_seed
 import torch
 import torch.nn.functional as F
+from torch.utils.data import random_split, Subset
 
 def evaluate(
     trigger_set,
@@ -73,36 +74,62 @@ def evaluate(
 def evaluate_cl(
     test_trigger_set,
     model_name_or_path: str,
-    batch_size: int,
+    # batch_size: int,
 ):  
     model = T5EncoderModel.from_pretrained(
         model_name_or_path,
+        # device='cuda',
         output_hidden_states=True,
+        ignore_mismatched_sizes=True,
         )
     
     l = len(test_trigger_set)
-    similarity_marices = [] # (len(test_trigger_set), 18, 18)
+    simlarity_marices = [] # (len(test_trigger_set), 18, 18)
     
-    for sample in test_trigger_set:
+    for sample in tqdm(test_trigger_set):
         batch_input_ids = sample['input_ids'] # (18, seq_length)
         batch_attention_mask = sample['attention_mask']
         inputs = {
-            'input_ids' : batch_input_ids,
-            'attention_mask' : batch_attention_mask,
+            'input_ids' : torch.tensor(batch_input_ids),
+            'attention_mask' : torch.tensor(batch_attention_mask),
         }
-        last_hidden_states = model(**inputs).last_hidden_states # (18, seq_length, hidden_states)
+        last_hidden_states = model(**inputs).last_hidden_state # (18, seq_length, hidden_states)
         aggregated_hidden_states = torch.sum(last_hidden_states, dim=-1) # (18, hidden_states)
         aggregated_hidden_states = F.normalize(aggregated_hidden_states, dim=-1)
-        similarity_marix = torch.matmul(aggregated_hidden_states, aggregated_hidden_states.T) # (18, 18)
-        similarity_marices.append(similarity_marix)   
-
-    mean_similarity_matrix = F.normalize(torch.sum(torch.tensor(similarity_marices), dim=0))
+        simlarity_marix = torch.matmul(aggregated_hidden_states, aggregated_hidden_states.T) # (18, 18)
+        simlarity_marices.append(simlarity_marix)
     
-    return mean_similarity_matrix
+    simlarity_marices = torch.stack(simlarity_marices, dim=0)
+    print(simlarity_marices.shape)   
+
+    mean_simlarity_matrix = torch.mean(simlarity_marices, dim=0)
+    print(mean_simlarity_matrix.shape)
+    
+    return mean_simlarity_matrix
     
 if __name__ == '__main__':
-    trigger_set = load_from_disk('./data/final_trigger_set')
-    res = evaluate(trigger_set=trigger_set, model_list=MODEL_LIST)
+    set_seed(42)
+        
+    # evaluate trajectories
+    # trigger_set = load_from_disk('./data/final_trigger_set')
     
-    distance_matrix_plot(result_dict=res,
-                         save_dir='result.png')
+    # res = evaluate(trigger_set=trigger_set, model_list=MODEL_LIST)
+    
+    # distance_matrix_plot(result_dict=res,
+    #                      save_dir='result.png')
+    
+    
+    # evaluate cl classifier
+    model_path = './metric_learning_models/test_1113'
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    contrastive_dataset = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer))
+    train_size = int(0.9 * len(contrastive_dataset))
+    test_size = len(contrastive_dataset) - train_size
+    train_dataset, test_dataset = random_split(contrastive_dataset, [train_size, test_size])
+    train_dataset = Subset(train_dataset, indices=range(0, 100))
+    
+    simlarity_matrix = evaluate_cl(test_trigger_set=train_dataset,
+                                   model_name_or_path=model_path,
+                                   )
+    simlarity_matrix_plot(simlarity_matrix=simlarity_matrix,
+                          save_dir='cl_train_result_02.png')

@@ -25,3 +25,25 @@ def distance_matrix_plot(result_dict,
     plt.tight_layout()
     plt.savefig(save_dir, format='png', dpi=300)
     plt.show()
+    
+def simlarity_matrix_plot(
+    simlarity_matrix,
+    save_dir,
+):
+    fig, axs = plt.subplots(1, 1, figsize=(48, 16))
+    
+    sns.heatmap(simlarity_matrix.detach().numpy(), 
+                annot=True, 
+                fmt=".2f", 
+                ax=axs, 
+                cmap="coolwarm", 
+                cbar=True,
+                xticklabels=MODEL_LABEL, 
+                yticklabels=MODEL_LABEL
+                )
+    
+    axs.set_title("Edit Distance Matrix")
+    
+    plt.tight_layout()
+    plt.savefig(save_dir, format='png', dpi=300)
+    plt.show()
