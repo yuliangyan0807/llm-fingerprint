@@ -89,7 +89,7 @@ class ContrastiveTrainer(transformers.Trainer):
             negative_logits = torch.exp(similarity_matrix[denominator_mask]).view(num_samples, -1) # (18, 16)
 
             # Compute the InfoNCE loss
-            loss = -torch.log(torch.exp(positive_logits) / (torch.exp(positive_logits) + negative_logits.sum(dim=1)) + 1e-8).sum()
+            loss = -torch.log(torch.exp(positive_logits) / negative_logits.sum(dim=1)).sum()
             total_loss += loss
             
             # # Mask out diagonal (self-similarity)
