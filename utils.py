@@ -101,21 +101,26 @@ def construct_contrastive_dataset(
     raw_data = load_from_disk('./data/trajectory_set')
     prompt_number = len(raw_data) // model_number
     
-    template = "Prompt: {}<SEP>Output: {}<SEP>Mean Entropy: {}."
+    def prob_map_fun(example):
+        return str(round(example, 2))
+    
+    template = "Prompt: {}<SEP>Output: {}<SEP>Mean Entropy: {}.<SEP>Token Probs: {}."
     contrastive_dataset = []
     print(f"Contructing the dataset for contrastive learning...")
     for i in tqdm(range(len(raw_data))):
         prompt = raw_data[i]['prompt']
         output = raw_data[i]['output']
         mean_entropy = str(raw_data[i]['mean_entropy'])
-        contrastive_dataset.append(template.format(prompt, output, mean_entropy))
+        token_probs = raw_data[i]['token_probs']
+        token_probs = "-".join(list(map(prob_map_fun, token_probs)))
+        contrastive_dataset.append(template.format(prompt, output, mean_entropy, token_probs))
     print(f"Tokenizing the dataset...")
     tokenized_list = [
         tokenizer(
             text,
             return_tensors="pt",
             padding="max_length",
-            max_length=128,
+            max_length=256,
             truncation=True,
         )
         for text in contrastive_dataset
