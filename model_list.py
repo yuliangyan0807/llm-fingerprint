@@ -103,10 +103,12 @@ MODEL_LIST_TRAIN = [
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3-8B-Instruct', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-SuperNova-Lite', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-ARC-Potpourri-Induction-8B', 
+  # Maybe has some bugs.
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-8B-Instruct-FP8', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/llama_3.1_8b_prop_logic_ft', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/calme-2.3-legalkit-8b', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Skywork', 
+  # Maybe has some bugs.
   '/mnt/data/hf_models/llama-3.1-8b-instruct/meta-llama_Llama-3.1-8B-Instruct-auto_gptq-int4-gs128-asym', 
   # Qwen2.5 Family.
   '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct', 
