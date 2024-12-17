@@ -47,32 +47,32 @@ def load_hf_model(model_name_or_path,
         
         files = [file for file in os.listdir(model_name_or_path)]
         
-        if 'adapter_config.json' not in files:
-            model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
-                                                        return_dict=True, 
-                                                        device_map="auto",
-                                                        output_hidden_states=True
-                                                        )
-            tokenizer = AutoTokenizer.from_pretrained(model_name_or_path,
-                                                      use_fast=False,
-                                                      padding_side='left',
-                                                      )
+        # if 'adapter_config.json' not in files:
+        model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
+                                                    return_dict=True, 
+                                                    device_map="auto",
+                                                    output_hidden_states=True
+                                                    )
+        tokenizer = AutoTokenizer.from_pretrained(model_name_or_path,
+                                                    use_fast=False,
+                                                    padding_side='left',
+                                                    )
         # Load the Lora fine-tuning version of the model.
-        else:
-            config = PeftConfig.from_pretrained(model_name_or_path)
-            model = AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
-                                                        return_dict=True, 
-                                                        device_map="auto",
-                                                        output_hidden_states=True,
-                                                        )
-            model = PeftModel.from_pretrained(model, model_name_or_path, 
-                                                        return_dict=True, 
-                                                        device_map="auto",
-                                                        output_hidden_states=True,
-                                                        torch_dtype=torch.bfloat16,
-                                                        quantizaiton_config=bnb_config
-                                                        )
-            tokenizer = AutoTokenizer.from_pretrained(config.base_model_name_or_path)
+        # else:
+        #     config = PeftConfig.from_pretrained(model_name_or_path)
+        #     model = AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
+        #                                                 return_dict=True, 
+        #                                                 device_map="auto",
+        #                                                 output_hidden_states=True,
+        #                                                 )
+        #     model = PeftModel.from_pretrained(model, model_name_or_path, 
+        #                                                 return_dict=True, 
+        #                                                 device_map="auto",
+        #                                                 output_hidden_states=True,
+        #                                                 torch_dtype=torch.bfloat16,
+        #                                                 quantizaiton_config=bnb_config
+        #                                                 )
+        #     tokenizer = AutoTokenizer.from_pretrained(config.base_model_name_or_path)
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
 
