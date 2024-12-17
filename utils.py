@@ -15,7 +15,6 @@ from dataclasses import dataclass, field
 def load_hf_model(model_name_or_path, 
                   generation_mode=False,
                   bnb_config=None, 
-                  fine_tuned=False, 
                   device='cuda' if torch.cuda.is_available() else 'cpu'
                   ):
     """
@@ -46,9 +45,9 @@ def load_hf_model(model_name_or_path,
                                                       )
             return model, tokenizer
         
-        if "instruction_tuning_models" in model_name_or_path in model_name_or_path:
-            fine_tuned = True
-        if not fine_tuned:
+        files = [file for file in os.listdir(model_name_or_path)]
+        
+        if 'adapter_config.json' not in files:
             model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
                                                         return_dict=True, 
                                                         device_map="auto",
@@ -58,16 +57,13 @@ def load_hf_model(model_name_or_path,
                                                       use_fast=False,
                                                       padding_side='left',
                                                       )
-        # load lora model
+        # Load the Lora fine-tuning version of the model.
         else:
-            # torch_dtype=torch.bfloat16, quantization_config=bnb_config
             config = PeftConfig.from_pretrained(model_name_or_path)
             model = AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
                                                         return_dict=True, 
                                                         device_map="auto",
                                                         output_hidden_states=True,
-                                                        # torch_dtype=torch.bfloat16,
-                                                        # quantization_config=bnb_config
                                                         )
             model = PeftModel.from_pretrained(model, model_name_or_path, 
                                                         return_dict=True, 
@@ -187,3 +183,7 @@ class DataCollatorForContrastiveDataset(object):
             input_ids=input_ids,
             attention_mask=attention_mask,
         )
+        
+if __name__ == '__main__':
+    data = load_from_disk('./data/trajectory_set')
+    print(data[360])

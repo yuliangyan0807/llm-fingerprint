@@ -122,7 +122,8 @@ if __name__ == '__main__':
     
     
     # evaluate cl classifier
-    model_path = './metric_learning_models/test_1113'
+    # model_path = './metric_learning_models/test_1114_gamma'
+    model_path = "google-t5/t5-base"
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     contrastive_dataset = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer))
     train_size = int(0.9 * len(contrastive_dataset))
@@ -134,4 +135,4 @@ if __name__ == '__main__':
                                    model_name_or_path=model_path,
                                    )
     simlarity_matrix_plot(simlarity_matrix=simlarity_matrix,
-                          save_dir='cl_train_result_02.png')
+                          save_dir='original_model.png')
