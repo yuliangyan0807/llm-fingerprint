@@ -181,7 +181,7 @@ def optimize_prompts_with_pair_sampling(
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
     
-    # model_list = MODEL_LIST
+    model_list = MODEL_LIST_TRAIN
 
     # Find optimized prompts
     # optimized_prompts = optimize_prompts_with_pair_sampling(
@@ -192,5 +192,8 @@ if __name__ == '__main__':
     #                                                     beta=0.7,
     #                                                     )
     
-    data = load_from_disk('./data/final_trigger_set')
-    print(len(data))
+    # data = load_from_disk('./data/seed_trigger_set')
+    # print(len(data))
+    
+    # Collect the trajectories of the models.
+    pre_generate_trajectory(model_list=MODEL_LIST_TRAIN)

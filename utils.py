@@ -14,7 +14,6 @@ from dataclasses import dataclass, field
 
 def load_hf_model(model_name_or_path, 
                   generation_mode=False,
-                  bnb_config=None, 
                   device='cuda' if torch.cuda.is_available() else 'cpu'
                   ):
     """

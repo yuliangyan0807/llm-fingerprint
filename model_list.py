@@ -100,7 +100,7 @@ MODEL_LIST = [
 # Model list for training the fingerprint extractor.
 MODEL_LIST_TRAIN = [
   # Llama 3.1 Family.
-  '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3-8B-Instruct', 
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-SuperNova-Lite', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-ARC-Potpourri-Induction-8B', 
   # Maybe has some bugs.
@@ -115,7 +115,8 @@ MODEL_LIST_TRAIN = [
   '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen-UMLS-7B-Instruct', 
   '/mnt/data/hf_models/qwen-2.5-7b-instruct/Math-IIO-7B-Instruct', 
   '/mnt/data/hf_models/qwen-2.5-7b-instruct/FinancialAdvice-Qwen2.5-7B', 
-  '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct-AWQ', 
+  # BUG
+  '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct-GPTQ-Int8S', 
   '/mnt/data/hf_models/qwen-2.5-7b-instruct/cybertron-v4-qw7B-UNAMGS', 
   '/mnt/data/hf_models/qwen-2.5-7b-instruct/qwen2.5-7B-instruct-simpo', 
   '/mnt/data/hf_models/qwen-2.5-7b-instruct/T.E-8.1',
