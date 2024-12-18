@@ -82,8 +82,8 @@ class ContrastiveTrainer(transformers.Trainer):
             
             labels = []
             for i in range(3):
-                for i in range(10):
-                    labels.append(i * 10)
+                for j in range(7):
+                    labels.append(i * 7)
             labels = torch.tensor(labels, dtype=torch.long, device=similarity_matrix.device)
             
             accumulated_similarity_matrix.append(similarity_matrix)
@@ -126,10 +126,12 @@ class ContrastiveTrainer(transformers.Trainer):
             
         inputs = torch.cat(accumulated_similarity_matrix, dim=0)
         labels = torch.cat(accumulated_labels, dim=0)
+        print(inputs.shape)
+        print(labels.shape)
         
-        loss = nn.CrossEntropyLoss(inputs, labels)
+        loss = nn.CrossEntropyLoss()
 
-        return loss
+        return loss(inputs, labels)
 
 def train():
     

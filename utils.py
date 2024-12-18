@@ -92,19 +92,31 @@ def construct_contrastive_dataset(
     - A new dataset with (input_ids, attention_mask) structure.
     """
     
-    model_number = len(MODEL_LIST)
+    model_number = len(MODEL_LIST_TRAIN)
     raw_data = load_from_disk('./data/trajectory_set')
     prompt_number = len(raw_data) // model_number
+    
+    prompts = []
+    seed_triggers = load_from_disk('./data/seed_trigger_set')
+    for i in range(model_number):
+        for j in range(len(seed_triggers)):
+            prompt = seed_triggers[j]['prompt']
+            prompts.append(prompt)
+    
+    raw_data = raw_data.add_column('prompt', prompts)
+    # raw_data = raw_data.rename_column('')
+    print(len(raw_data))
     
     def prob_map_fun(example):
         return str(round(example, 2))
     
-    template = "Prompt: {}<SEP>Output: {}<SEP>Mean Entropy: {}.<SEP>Token Probs: {}."
+    # template = "Prompt: {}<SEP>Output: {}<SEP>Mean Entropy: {}.<SEP>Token Probs: {}."
+    template = "Prompt: {}<SEP>Output: {}<SEP>Mean Entropy: {}."
     contrastive_dataset = []
     print(f"Contructing the dataset for contrastive learning...")
     for i in tqdm(range(len(raw_data))):
         prompt = raw_data[i]['prompt']
-        output = raw_data[i]['output']
+        output = raw_data[i]['decode_output']
         mean_entropy = str(raw_data[i]['mean_entropy'])
         token_probs = raw_data[i]['token_probs']
         token_probs = "-".join(list(map(prob_map_fun, token_probs)))
@@ -142,7 +154,7 @@ def construct_contrastive_dataset(
             'attention_mask' : attention_masks,
             }
     dataset = Dataset.from_dict(data)
-    # dataset.save_to_disk('./data/contrastive_set')
+    dataset.save_to_disk('./data/contrastive_set')
     
     return dataset
 
@@ -184,5 +196,7 @@ class DataCollatorForContrastiveDataset(object):
         )
         
 if __name__ == '__main__':
-    data = load_from_disk('./data/trajectory_set')
-    print(data[360])
+    # data = load_from_disk('./data/trajectory_set')
+    # print(data[360])
+    tokenizer = AutoTokenizer.from_pretrained('google-t5/t5-base')
+    construct_contrastive_dataset(tokenizer=tokenizer)
