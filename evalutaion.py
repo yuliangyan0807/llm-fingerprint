@@ -7,11 +7,12 @@ import numpy as np
 from tqdm import tqdm
 from model_list import *
 from datasets import load_from_disk
-from fig_plot import *
+# from fig_plot import *
 from transformers import T5EncoderModel, set_seed
 import torch
 import torch.nn.functional as F
 from torch.utils.data import random_split, Subset
+from sklearn.metrics import roc_curve, auc, roc_auc_score
 
 @torch.no_grad()
 def evaluate(
@@ -80,7 +81,7 @@ def evaluate_cl(
 ):  
     model = T5EncoderModel.from_pretrained(
         model_name_or_path,
-        # device='cuda',
+        device_map='auto',
         output_hidden_states=True,
         ignore_mismatched_sizes=True,
         )
@@ -102,12 +103,39 @@ def evaluate_cl(
         simlarity_marices.append(simlarity_marix)
     
     simlarity_marices = torch.stack(simlarity_marices, dim=0)
-    print(simlarity_marices.shape)   
+    # print(simlarity_marices.shape)   
 
     mean_simlarity_matrix = torch.mean(simlarity_marices, dim=0)
-    print(mean_simlarity_matrix.shape)
+    # print(mean_simlarity_matrix.shape)
     
-    return mean_simlarity_matrix
+    # Llama Family.
+    llama_labels = np.zeros(21)
+    llama_labels[0:7] = 1
+    llama_pred = mean_simlarity_matrix.detach().numpy()[0,:]
+    llama_roc = roc_auc_score(y_true=llama_labels, y_score=llama_pred)
+    print(f"Llama family labels: {llama_labels}")
+    print(f"Extractor predict on llama family: {llama_pred}")
+    print(f"Roc-auc score of the llama family: {llama_roc}")
+    
+    # Qwen Family
+    qwen_labels = np.zeros(21)
+    qwen_labels[7:14] = 1
+    qwen_pred = mean_simlarity_matrix.detach().numpy()[7,:]
+    qwen_roc = roc_auc_score(y_true=qwen_labels, y_score=qwen_pred)
+    print(f"Qwen family labels: {qwen_labels}")
+    print(f"Extractor predict on qwen family: {qwen_pred}")
+    print(f"Roc-auc score of the qwen family: {qwen_roc}")
+    
+    # Mistral Family.
+    mistral_labels = np.zeros(21)
+    mistral_labels[14:21] = 1
+    mistral_pred = mean_simlarity_matrix.detach().numpy()[14,:]
+    mistral_roc = roc_auc_score(y_true=mistral_labels, y_score=mistral_pred)
+    print(f"Mistral family labels: {mistral_labels}")
+    print(f"Extractor predict on mistral family: {mistral_pred}")
+    print(f"Roc-auc score of the mistral family: {mistral_roc}")
+    
+    # return mean_simlarity_matrix
     
 if __name__ == '__main__':
     set_seed(42)
@@ -131,8 +159,6 @@ if __name__ == '__main__':
     train_dataset, test_dataset = random_split(contrastive_dataset, [train_size, test_size])
     train_dataset = Subset(train_dataset, indices=range(0, 100))
     
-    simlarity_matrix = evaluate_cl(test_trigger_set=train_dataset,
-                                   model_name_or_path=model_path,
-                                   )
-    simlarity_matrix_plot(simlarity_matrix=simlarity_matrix,
-                          save_dir='original_model.png')
+    evaluate_cl(test_trigger_set=train_dataset,
+                model_name_or_path=model_path,
+            )

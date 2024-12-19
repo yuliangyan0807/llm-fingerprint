@@ -84,6 +84,7 @@ def load_hf_model(model_name_or_path,
 
 def construct_contrastive_dataset(
     tokenizer: transformers.PreTrainedTokenizer,
+    save: bool=False,
     ):
     """
     Constructs contrastive learning samples for each data point.
@@ -154,7 +155,8 @@ def construct_contrastive_dataset(
             'attention_mask' : attention_masks,
             }
     dataset = Dataset.from_dict(data)
-    dataset.save_to_disk('./data/contrastive_set')
+    if save == True:
+        dataset.save_to_disk('./data/contrastive_set')
     
     return dataset
 

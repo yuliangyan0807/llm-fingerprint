@@ -126,8 +126,6 @@ class ContrastiveTrainer(transformers.Trainer):
             
         inputs = torch.cat(accumulated_similarity_matrix, dim=0)
         labels = torch.cat(accumulated_labels, dim=0)
-        print(inputs.shape)
-        print(labels.shape)
         
         loss = nn.CrossEntropyLoss()
 
