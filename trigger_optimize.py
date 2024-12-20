@@ -59,7 +59,7 @@ def pre_generate_trajectory(
                             #  "labels": labels
                              }
     optimized_trigger_set = Dataset.from_dict(optimized_trigger_set)
-    optimized_trigger_set.save_to_disk('./data/optimized_trigger_set')
+    optimized_trigger_set.save_to_disk('./data/trajectory_set_evaluation')
 
 def optimize_prompts_with_pair_sampling( 
                                         model_list, 
@@ -196,4 +196,6 @@ if __name__ == '__main__':
     # print(len(data))
     
     # Collect the trajectories of the models.
-    pre_generate_trajectory(model_list=MODEL_LIST_TRAIN)
+    pre_generate_trajectory(model_list=MODEL_LIST_TEST,
+                            batch_size=25
+                            )

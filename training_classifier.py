@@ -56,7 +56,6 @@ class ContrastiveTrainer(transformers.Trainer):
         """
         inputs: Dict{"input_ids", "attention_mask"}.
         """
-        total_loss = 0.0
         count = 0
         batch_input_ids = inputs['input_ids'] # (batch_size, 18, seq_length)
         batch_attention_mask = inputs['attention_mask']
@@ -88,41 +87,6 @@ class ContrastiveTrainer(transformers.Trainer):
             
             accumulated_similarity_matrix.append(similarity_matrix)
             accumulated_labels.append(labels)
-                
-            # num_samples = similarity_matrix.size(0)
-            # positive_mask = torch.zeros_like(similarity_matrix, dtype=torch.bool)
-            # for i in range(0, num_samples, 2):
-            #     positive_mask[i][i + 1] = 1
-            #     positive_mask[i + 1][i] = 1
-                
-            # # # Get positive pair (anchor, positive sample) similarities,
-            # # positive_logits = similarity_matrix[positive_mask]
-
-            # # # Mask out (anchor, positive sample) and (anchor, anchor) pairs for the denominator
-            # # denominator_mask = ~positive_mask & ~torch.eye(num_samples, dtype=torch.bool, device=similarity_matrix.device)
-            # # negative_logits = torch.exp(similarity_matrix[denominator_mask]).view(num_samples, -1) # (18, 16)
-
-            # # # Compute the InfoNCE loss
-            # # loss = -torch.log(torch.exp(positive_logits) / negative_logits.sum(dim=1)).mean()
-            # # # loss = -torch.log(torch.exp(positive_logits)).sum()
-            # # total_loss += loss
-            
-            # # Mask out diagonal (self-similarity)
-            # diagonal_mask = torch.eye(num_samples, dtype=torch.bool).to(model.device)
-            # # similarity_matrix.masked_fill_(diagonal_mask, float('inf'))
-            # # Notice that this may casue the overflow.
-            # similarity_matrix.masked_fill_(diagonal_mask, -1e9)
-            
-            # # Apply log-softmax across rows
-            # logits = F.log_softmax(similarity_matrix, dim=1)
-            
-            # # Only select positive logits
-            # positive_logits = logits[positive_mask]
-            
-            # # Calculate the contrastive loss for positive pairs
-            # # loss = -positive_logits.mean()
-            # loss = -positive_logits.sum()
-            # total_loss += loss
             
         inputs = torch.cat(accumulated_similarity_matrix, dim=0)
         labels = torch.cat(accumulated_labels, dim=0)
@@ -151,12 +115,16 @@ def train():
     
     tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path)
     
-    contrastive_dataset = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer))
+    raw_data = load_from_disk('./data/trajectory_set')
+    contrastive_dataset = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer,
+                                                                           raw_data=raw_data,
+                                                                           model_list=MODEL_LIST_TRAIN))
     data_collator = DataCollatorForContrastiveDataset(tokenizer=tokenizer)
     
-    train_size = int(0.9 * len(contrastive_dataset))
-    test_size = len(contrastive_dataset) - train_size
-    train_dataset, test_dataset = random_split(contrastive_dataset, [train_size, test_size])
+    # train_size = int(0.9 * len(contrastive_dataset))
+    # test_size = len(contrastive_dataset) - train_size
+    # train_dataset, test_dataset = random_split(contrastive_dataset, [train_size, test_size])
+    train_dataset = contrastive_dataset
     
     trainer = ContrastiveTrainer(
         model=model,

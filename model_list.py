@@ -133,15 +133,18 @@ MODEL_LIST_TRAIN = [
 # Model list for evaluation the fingerprint extractor.
 MODEL_LIST_TEST = [
   # Llama Family.
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/SummLlama3.1-8B',
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Unsloth-Meta-Llama-3.1-8B-Instruct', 
-  '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-GPTQ-Q_8',
+  # '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-GPTQ-Q_8', 
   # Qwen Family.
+  '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct', 
   '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct-Uncensored', 
   '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct-abliterated-v2', 
-  '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct-GPTQ-Int4', 
+  # '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct-GPTQ-Int4', 
   # Mistral Family.
+  '/mnt/data/hf_models/mistral-7b-instruct/Mistral-7B-Instruct-v0.1', 
   '/mnt/data/hf_models/mistral-7b-instruct/full_v2_astromistral', 
   '/mnt/data/hf_models/mistral-7b-instruct/mistralai-Code-Instruct-Finetune-SG1-V5', 
-  '/mnt/data/hf_models/mistral-7b-instruct/Mistral-7B-Instruct-v0.1-AWQ',
+  # '/mnt/data/hf_models/mistral-7b-instruct/Mistral-7B-Instruct-v0.1-AWQ',
 ]

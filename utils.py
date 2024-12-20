@@ -84,6 +84,8 @@ def load_hf_model(model_name_or_path,
 
 def construct_contrastive_dataset(
     tokenizer: transformers.PreTrainedTokenizer,
+    raw_data,
+    model_list,
     save: bool=False,
     ):
     """
@@ -93,8 +95,9 @@ def construct_contrastive_dataset(
     - A new dataset with (input_ids, attention_mask) structure.
     """
     
-    model_number = len(MODEL_LIST_TRAIN)
-    raw_data = load_from_disk('./data/trajectory_set')
+    # model_number = len(MODEL_LIST_TRAIN)
+    model_number = len(model_list)
+    # raw_data = load_from_disk('./data/trajectory_set')
     prompt_number = len(raw_data) // model_number
     
     prompts = []
