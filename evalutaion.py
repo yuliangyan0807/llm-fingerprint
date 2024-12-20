@@ -75,7 +75,8 @@ def evaluate(
 
 @torch.no_grad()
 def evaluate_cl(
-    test_trigger_set,
+    model_list,
+    contrastive_set,
     model_name_or_path: str,
     # batch_size: int,
 ):  
@@ -86,10 +87,10 @@ def evaluate_cl(
         ignore_mismatched_sizes=True,
         )
     
-    l = len(test_trigger_set)
+    # l = len(test_trigger_set)
     simlarity_marices = [] # (len(test_trigger_set), 18, 18)
     
-    for sample in tqdm(test_trigger_set):
+    for sample in tqdm(contrastive_set):
         batch_input_ids = sample['input_ids'] # (18, seq_length)
         batch_attention_mask = sample['attention_mask']
         inputs = {
@@ -135,35 +136,57 @@ def evaluate_cl(
     # print(f"Extractor predict on mistral family: {mistral_pred}")
     # print(f"Roc-auc score of the mistral family: {mistral_roc}")
     
+    # Compute the model numbers in each family.
+    model_number_per_family = len(model_list) // 3
+    model_number = len(model_list)
+    original_model_index = range(0, model_number, model_number_per_family)
     
     # Llama Family.
-    llama_labels = np.zeros(9)
-    llama_labels[0:3] = 1
-    llama_pred = mean_simlarity_matrix.detach().numpy()[1,:]
-    llama_roc = roc_auc_score(y_true=llama_labels, y_score=llama_pred)
+    llama_labels = np.zeros(model_number)
+    start = original_model_index[0]
+    llama_labels[start: start + model_number_per_family] = 1
     print(f"Llama family labels: {llama_labels}")
-    print(f"Extractor predict on llama family: {llama_pred}")
-    print(f"Roc-auc score of the llama family: {llama_roc}")
+    
+    for i in range(start, start + model_number_per_family):
+        # Obtain the i-th (suspect model) row of the simlarity matrix
+        llama_pred = mean_simlarity_matrix.detach().numpy()[i,:]
+        llama_roc = roc_auc_score(y_true=llama_labels, y_score=llama_pred)
+        current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
+        print(f"Suspect Model is {current_model}.")
+        print(f"Extractor predict on current: {llama_pred}")
+        print(f"Roc-auc score of the current: {llama_roc}")
+        print(f"#############################################")
     
     # Qwen Family
-    qwen_labels = np.zeros(9)
-    qwen_labels[3:6] = 1
-    qwen_pred = mean_simlarity_matrix.detach().numpy()[4,:]
-    qwen_roc = roc_auc_score(y_true=qwen_labels, y_score=qwen_pred)
+    qwen_labels = np.zeros(model_number)
+    start = original_model_index[1]
+    qwen_labels[start: start + model_number_per_family] = 1
     print(f"Qwen family labels: {qwen_labels}")
-    print(f"Extractor predict on qwen family: {qwen_pred}")
-    print(f"Roc-auc score of the qwen family: {qwen_roc}")
+    
+    for i in range(start, start + model_number_per_family):
+        qwen_pred = mean_simlarity_matrix.detach().numpy()[i,:]
+        qwen_roc = roc_auc_score(y_true=qwen_labels, y_score=qwen_pred)
+        current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
+        print(f"Suspect Model is {current_model}.")
+        print(f"Extractor predict on current: {qwen_pred}")
+        print(f"Roc-auc score of the current: {qwen_roc}")
+        print(f"#############################################")
     
     # Mistral Family.
-    mistral_labels = np.zeros(9)
-    mistral_labels[6:9] = 1
-    mistral_pred = mean_simlarity_matrix.detach().numpy()[7,:]
-    mistral_roc = roc_auc_score(y_true=mistral_labels, y_score=mistral_pred)
+    mistral_labels = np.zeros(model_number)
+    start = original_model_index[2]
+    mistral_labels[start: start + model_number_per_family] = 1
     print(f"Mistral family labels: {mistral_labels}")
-    print(f"Extractor predict on mistral family: {mistral_pred}")
-    print(f"Roc-auc score of the mistral family: {mistral_roc}")
     
-    # return mean_simlarity_matrix
+    for i in range(start, start + model_number_per_family):
+        mistral_pred = mean_simlarity_matrix.detach().numpy()[i,:]
+        mistral_roc = roc_auc_score(y_true=mistral_labels, y_score=mistral_pred)
+        current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
+        print(f"Suspect Model is {current_model}.")
+        print(f"Extractor predict on current: {mistral_pred}")
+        print(f"Roc-auc score of the current: {mistral_roc}")
+        print(f"#############################################")
+    
     
 if __name__ == '__main__':
     set_seed(42)
@@ -178,7 +201,7 @@ if __name__ == '__main__':
     
     
     # evaluate cl classifier
-    model_path = './metric_learning_models/1219_0'
+    model_path = './metric_learning_models/1220_0'
     # model_path = "google-t5/t5-base"
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     
@@ -194,11 +217,11 @@ if __name__ == '__main__':
     contrastive_dataset_evaluation = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer,
                                                                                       raw_data=raw_data,
                                                                                       model_list=MODEL_LIST_TEST))
-    train_size = int(0.9 * len(contrastive_dataset_evaluation))
-    test_size = len(contrastive_dataset_evaluation) - train_size
-    train_dataset, test_dataset = random_split(contrastive_dataset_evaluation, [train_size, test_size])
+    # train_size = int(0.9 * len(contrastive_dataset_evaluation))
+    # test_size = len(contrastive_dataset_evaluation) - train_size
+    # train_dataset, test_dataset = random_split(contrastive_dataset_evaluation, [train_size, test_size])
     # train_dataset = Subset(train_dataset, indices=range(0, 100))
     
-    evaluate_cl(test_trigger_set=train_dataset,
+    evaluate_cl(test_trigger_set=contrastive_dataset_evaluation,
                 model_name_or_path=model_path,
             )
