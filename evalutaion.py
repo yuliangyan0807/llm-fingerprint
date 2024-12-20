@@ -109,32 +109,7 @@ def evaluate_cl(
     mean_simlarity_matrix = torch.mean(simlarity_marices, dim=0)
     # print(mean_simlarity_matrix.shape)
     
-    # # Llama Family.
-    # llama_labels = np.zeros(21)
-    # llama_labels[0:7] = 1
-    # llama_pred = mean_simlarity_matrix.detach().numpy()[0,:]
-    # llama_roc = roc_auc_score(y_true=llama_labels, y_score=llama_pred)
-    # print(f"Llama family labels: {llama_labels}")
-    # print(f"Extractor predict on llama family: {llama_pred}")
-    # print(f"Roc-auc score of the llama family: {llama_roc}")
-    
-    # # Qwen Family
-    # qwen_labels = np.zeros(21)
-    # qwen_labels[7:14] = 1
-    # qwen_pred = mean_simlarity_matrix.detach().numpy()[7,:]
-    # qwen_roc = roc_auc_score(y_true=qwen_labels, y_score=qwen_pred)
-    # print(f"Qwen family labels: {qwen_labels}")
-    # print(f"Extractor predict on qwen family: {qwen_pred}")
-    # print(f"Roc-auc score of the qwen family: {qwen_roc}")
-    
-    # # Mistral Family.
-    # mistral_labels = np.zeros(21)
-    # mistral_labels[14:21] = 1
-    # mistral_pred = mean_simlarity_matrix.detach().numpy()[14,:]
-    # mistral_roc = roc_auc_score(y_true=mistral_labels, y_score=mistral_pred)
-    # print(f"Mistral family labels: {mistral_labels}")
-    # print(f"Extractor predict on mistral family: {mistral_pred}")
-    # print(f"Roc-auc score of the mistral family: {mistral_roc}")
+    print(f"Start Evaluating...")
     
     # Compute the model numbers in each family.
     model_number_per_family = len(model_list) // 3
@@ -201,27 +176,25 @@ if __name__ == '__main__':
     
     
     # evaluate cl classifier
-    model_path = './metric_learning_models/1220_0'
-    # model_path = "google-t5/t5-base"
+    # model_path = './metric_learning_models/1220_0'
+    model_path = "google-t5/t5-base"
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     
     # evaluation on the train models.
-    # contrastive_dataset = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer))
-    # train_size = int(0.9 * len(contrastive_dataset))
-    # test_size = len(contrastive_dataset) - train_size
-    # train_dataset, test_dataset = random_split(contrastive_dataset, [train_size, test_size])
-    # train_dataset = Subset(train_dataset, indices=range(0, 100))
-    
-    # evaluation on the test models.
-    raw_data = load_from_disk('./data/trajectory_set_evaluation')
+    raw_data = load_from_disk('./data/trajectory_set_train')
     contrastive_dataset_evaluation = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer,
                                                                                       raw_data=raw_data,
-                                                                                      model_list=MODEL_LIST_TEST))
-    # train_size = int(0.9 * len(contrastive_dataset_evaluation))
-    # test_size = len(contrastive_dataset_evaluation) - train_size
-    # train_dataset, test_dataset = random_split(contrastive_dataset_evaluation, [train_size, test_size])
-    # train_dataset = Subset(train_dataset, indices=range(0, 100))
+                                                                                      model_list=MODEL_LIST_TRAIN))
     
-    evaluate_cl(test_trigger_set=contrastive_dataset_evaluation,
+
+    # evaluation on the test models.
+    # raw_data = load_from_disk('./data/trajectory_set_evaluation')
+    # contrastive_dataset_evaluation = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer,
+    #                                                                                   raw_data=raw_data,
+    #                                                                                   model_list=MODEL_LIST_TEST))
+    
+    
+    evaluate_cl(model_list=MODEL_LIST_TRAIN,
+                contrastive_set=contrastive_dataset_evaluation,
                 model_name_or_path=model_path,
             )
