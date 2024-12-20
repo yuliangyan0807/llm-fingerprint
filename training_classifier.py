@@ -81,8 +81,8 @@ class ContrastiveTrainer(transformers.Trainer):
             
             labels = []
             for i in range(3):
-                for j in range(7):
-                    labels.append(i * 7)
+                for j in range(8):
+                    labels.append(i * 8)
             labels = torch.tensor(labels, dtype=torch.long, device=similarity_matrix.device)
             
             accumulated_similarity_matrix.append(similarity_matrix)
@@ -115,7 +115,7 @@ def train():
     
     tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path)
     
-    raw_data = load_from_disk('./data/trajectory_set')
+    raw_data = load_from_disk('./data/trajectory_set_train')
     contrastive_dataset = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer,
                                                                            raw_data=raw_data,
                                                                            model_list=MODEL_LIST_TRAIN))
