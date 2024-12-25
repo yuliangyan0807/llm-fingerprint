@@ -176,8 +176,11 @@ if __name__ == '__main__':
     
     
     # evaluate cl classifier
+    # model_path = './metric_learning_models/1219_0'
     # model_path = './metric_learning_models/1220_0'
-    model_path = "google-t5/t5-base"
+    # model_path = './metric_learning_models/1221_0'
+    model_path = './metric_learning_models/1221_2'
+    # model_path = "google-t5/t5-base"
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     
     # evaluation on the train models.

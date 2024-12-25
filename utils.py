@@ -158,6 +158,7 @@ def construct_contrastive_dataset(
             'attention_mask' : attention_masks,
             }
     dataset = Dataset.from_dict(data)
+    dataset = dataset.shuffle(seed=42)
     if save == True:
         dataset.save_to_disk('./data/contrastive_set')
     
