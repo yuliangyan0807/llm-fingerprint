@@ -50,12 +50,11 @@ class ContrastiveTrainer(transformers.Trainer):
     def compute_loss(self, 
                      model, 
                      inputs,
-                     temperature=1.0, 
+                     temperature=0.2, 
                      ):
         """
         inputs: Dict{"input_ids", "attention_mask"}.
         """
-        count = 0
         batch_input_ids = inputs['input_ids'] # (batch_size, 18, seq_length)
         batch_attention_mask = inputs['attention_mask']
         
@@ -71,10 +70,9 @@ class ContrastiveTrainer(transformers.Trainer):
                 "attention_mask" : torch.tensor(attention_mask),
             }   
             # print(model_intpus['input_ids'].shape)
-            hidden_states = model(**model_intpus).last_hidden_state # (18, seq_length, hidden_dim)
+            hidden_states = model(**model_intpus).last_hidden_state # (24, seq_length, hidden_dim)
             # Aggeragate the hidden states.
-            aggeragated_hidden_states = torch.sum(hidden_states, dim=1) # (18, hidden_dim)
-            # aggeragated_hidden_states = hidden_states[:, 0, :] # (18, hidden_dim)
+            aggeragated_hidden_states = torch.sum(hidden_states, dim=1)
             aggeragated_hidden_states = F.normalize(aggeragated_hidden_states, p=2, dim=-1) # (24, hidden_dim)
             similarity_matrix = torch.matmul(aggeragated_hidden_states, aggeragated_hidden_states.T) / temperature # (24, 24)
             
@@ -96,9 +94,9 @@ class ContrastiveTrainer(transformers.Trainer):
                 torch.cat((similarity_matrix[14:, :16], similarity_matrix[14:, 16:17]), dim=1),
             ], dim=0)
             
-            labels = torch.arange(0, logits.size(0)) // 7 * 8
+            # positive labels: [0, 8, 16]
+            labels = torch.arange(0, logits.size(0)) // 7 * 8 # (21)
             labels = labels.to(similarity_matrix.device)
-            print(labels)
             
             accumulated_similarity_matrix.append(logits)
             accumulated_labels.append(labels)
