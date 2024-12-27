@@ -47,11 +47,10 @@ class ContrastiveTrainer(transformers.Trainer):
     """
     Customize trainer for contrastive learning.
     """
-    
     def compute_loss(self, 
                      model, 
                      inputs,
-                     temperature=0.2, 
+                     temperature=1.0, 
                      ):
         """
         inputs: Dict{"input_ids", "attention_mask"}.
@@ -76,16 +75,32 @@ class ContrastiveTrainer(transformers.Trainer):
             # Aggeragate the hidden states.
             aggeragated_hidden_states = torch.sum(hidden_states, dim=1) # (18, hidden_dim)
             # aggeragated_hidden_states = hidden_states[:, 0, :] # (18, hidden_dim)
-            aggeragated_hidden_states = F.normalize(aggeragated_hidden_states, p=2, dim=-1)
-            similarity_matrix = torch.matmul(aggeragated_hidden_states, aggeragated_hidden_states.T) / temperature # (18, 18)
+            aggeragated_hidden_states = F.normalize(aggeragated_hidden_states, p=2, dim=-1) # (24, hidden_dim)
+            similarity_matrix = torch.matmul(aggeragated_hidden_states, aggeragated_hidden_states.T) / temperature # (24, 24)
             
-            labels = []
-            for i in range(3):
-                for j in range(8):
-                    labels.append(i * 8)
-            labels = torch.tensor(labels, dtype=torch.long, device=similarity_matrix.device)
+            # Caculate the total model numbers.
+            model_number = similarity_matrix.size(0) # 24
             
-            accumulated_similarity_matrix.append(similarity_matrix)
+            # Select the postive and negative logits.
+            remove_indices = torch.arange(0, model_number, step=model_number // 3) # [0, 8, 16]
+            all_indices = torch.arange(model_number)
+            keep_indices = all_indices[~torch.isin(all_indices, remove_indices)].to(similarity_matrix.device)
+            # Remove the raw of the base models.
+            similarity_matrix = torch.index_select(similarity_matrix, dim=0, index=keep_indices) # (21, 24)
+            # Obtain the logits.
+            # (21, 17)
+            # (suspect_model, base_model): 1, (suspect_model, other family models): 16.
+            logits = torch.cat([
+                torch.cat((similarity_matrix[:7, :1], similarity_matrix[:7, 8:]), dim=1),
+                torch.cat((similarity_matrix[7:14, :8], similarity_matrix[7:14, 8:9], similarity_matrix[7:14, 16:]), dim=1),
+                torch.cat((similarity_matrix[14:, :16], similarity_matrix[14:, 16:17]), dim=1),
+            ], dim=0)
+            
+            labels = torch.arange(0, logits.size(0)) // 7 * 8
+            labels = labels.to(similarity_matrix.device)
+            print(labels)
+            
+            accumulated_similarity_matrix.append(logits)
             accumulated_labels.append(labels)
             
         inputs = torch.cat(accumulated_similarity_matrix, dim=0)
