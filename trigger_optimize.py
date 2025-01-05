@@ -11,6 +11,7 @@ from datasets import load_from_disk, Dataset
 import warnings
 from itertools import combinations
 from transformers import set_seed
+import os
 
 def pre_generate_trajectory(
     model_list: List[str],
@@ -59,7 +60,7 @@ def pre_generate_trajectory(
                             #  "labels": labels
                              }
     optimized_trigger_set = Dataset.from_dict(optimized_trigger_set)
-    optimized_trigger_set.save_to_disk('./data/trajectory_set_train')
+    optimized_trigger_set.save_to_disk('./data/trajectory_set_unseen')
 
 def optimize_prompts_with_pair_sampling( 
                                         model_list, 
@@ -181,7 +182,8 @@ def optimize_prompts_with_pair_sampling(
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
     
-    model_list = MODEL_LIST_TRAIN
+    # model_list = MODEL_LIST_TRAIN
+    model_list = MODEL_LIST_UNSEEN
 
     # Find optimized prompts
     # optimized_prompts = optimize_prompts_with_pair_sampling(

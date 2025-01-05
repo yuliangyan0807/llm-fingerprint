@@ -3,12 +3,12 @@ import torch.nn.functional as F
 import torch.nn as nn
 import transformers
 from transformers import T5EncoderModel, set_seed
-from torch.utils.data import random_split
 from dataclasses import dataclass, field
 from typing import Optional
 import wandb
 
 from utils import *
+from model_list import *
 
 @dataclass
 class ModelArguments:
@@ -50,7 +50,7 @@ class ContrastiveTrainer(transformers.Trainer):
     def compute_loss(self, 
                      model, 
                      inputs,
-                     temperature=0.2, 
+                     temperature=0.07, 
                      ):
         """
         inputs: Dict{"input_ids", "attention_mask"}.
@@ -62,7 +62,6 @@ class ContrastiveTrainer(transformers.Trainer):
         accumulated_labels = []
         
         for input_ids, attention_mask in zip(batch_input_ids, batch_attention_mask):
-            count += 1
             # input_ids = sample['input_ids']
             # attention_mask = sample['attention_mask']
             model_intpus = {
@@ -70,32 +69,35 @@ class ContrastiveTrainer(transformers.Trainer):
                 "attention_mask" : torch.tensor(attention_mask),
             }   
             # print(model_intpus['input_ids'].shape)
-            hidden_states = model(**model_intpus).last_hidden_state # (24, seq_length, hidden_dim)
+            hidden_states = model(**model_intpus).last_hidden_state # (21, seq_length, hidden_dim)
+            # TODO
+            # Use the representation of the [CLS] token.
+            # aggeragated_hidden_states = torch.squeeze(hidden_states[:, 0, :])
             # Aggeragate the hidden states.
             aggeragated_hidden_states = torch.sum(hidden_states, dim=1)
-            aggeragated_hidden_states = F.normalize(aggeragated_hidden_states, p=2, dim=-1) # (24, hidden_dim)
-            similarity_matrix = torch.matmul(aggeragated_hidden_states, aggeragated_hidden_states.T) / temperature # (24, 24)
+            aggeragated_hidden_states = F.normalize(aggeragated_hidden_states, p=2, dim=-1) # (21, hidden_dim)
+            similarity_matrix = torch.matmul(aggeragated_hidden_states, aggeragated_hidden_states.T) / temperature # (21, 21)
             
             # Caculate the total model numbers.
-            model_number = similarity_matrix.size(0) # 24
+            model_number = similarity_matrix.size(0) # 21
             
             # Select the postive and negative logits.
-            remove_indices = torch.arange(0, model_number, step=model_number // 3) # [0, 8, 16]
+            remove_indices = torch.arange(0, model_number, step=model_number // 3) # [0, 7, 14]
             all_indices = torch.arange(model_number)
             keep_indices = all_indices[~torch.isin(all_indices, remove_indices)].to(similarity_matrix.device)
             # Remove the raw of the base models.
-            similarity_matrix = torch.index_select(similarity_matrix, dim=0, index=keep_indices) # (21, 24)
+            similarity_matrix = torch.index_select(similarity_matrix, dim=0, index=keep_indices) # (18, 21)
             # Obtain the logits.
-            # (21, 17)
-            # (suspect_model, base_model): 1, (suspect_model, other family models): 16.
+            # (18, 13)
+            # (suspect_model, base_model): 1, (suspect_model, other family models): 12.
             logits = torch.cat([
-                torch.cat((similarity_matrix[:7, :1], similarity_matrix[:7, 8:]), dim=1),
-                torch.cat((similarity_matrix[7:14, :8], similarity_matrix[7:14, 8:9], similarity_matrix[7:14, 16:]), dim=1),
-                torch.cat((similarity_matrix[14:, :16], similarity_matrix[14:, 16:17]), dim=1),
+                torch.cat((similarity_matrix[:6, :1], similarity_matrix[:6, 7:]), dim=1),
+                torch.cat((similarity_matrix[6:12, :7], similarity_matrix[6:12, 7:8], similarity_matrix[6:12, 14:]), dim=1),
+                torch.cat((similarity_matrix[12:, :14], similarity_matrix[12:, 14:15]), dim=1),
             ], dim=0)
             
-            # positive labels: [0, 8, 16]
-            labels = torch.arange(0, logits.size(0)) // 7 * 8 # (21)
+            # positive labels: [0, 7, 14]
+            labels = torch.arange(0, logits.size(0)) // 6 * 7 # (18)
             labels = labels.to(similarity_matrix.device)
             
             accumulated_similarity_matrix.append(logits)
@@ -119,24 +121,27 @@ def train():
     )
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
     
-    model = T5EncoderModel.from_pretrained(model_args.model_name_or_path,
-                                                 output_hidden_states=True
-                                                # num_labels=model_args.num_labels,
-                                                )
+    model = T5EncoderModel.from_pretrained(model_args.model_name_or_path, output_hidden_states=True)
     # Some bugs about the T5 model.
     model.floating_point_ops = lambda s: 0
     
     tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path)
     
     raw_data = load_from_disk('./data/trajectory_set_train')
+    
+    fold = 0
+    res, model_list_train, model_list_eval = get_cross_validation_datasets(
+        trajectory_set=raw_data,
+        model_list=MODEL_LIST_TRAIN,
+        fold=fold
+    )
+    train_set, eval_set = res['train'], res['eval']
+    
     contrastive_dataset = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer,
-                                                                           raw_data=raw_data,
-                                                                           model_list=MODEL_LIST_TRAIN))
+                                                                           raw_data=train_set,
+                                                                           model_list=model_list_train))
     data_collator = DataCollatorForContrastiveDataset(tokenizer=tokenizer)
     
-    # train_size = int(0.9 * len(contrastive_dataset))
-    # test_size = len(contrastive_dataset) - train_size
-    # train_dataset, test_dataset = random_split(contrastive_dataset, [train_size, test_size])
     train_dataset = contrastive_dataset
     
     trainer = ContrastiveTrainer(
