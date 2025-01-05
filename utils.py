@@ -5,12 +5,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel, PeftConfig
 import os
 from datasets import Dataset, load_from_disk
-import random
 from model_list import *
-from typing import Sequence, Dict
+from typing import Sequence, Dict, List
 from tqdm import tqdm
 from torch.utils.data import Dataset as ds
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+import numpy as np
 
 def load_hf_model(model_name_or_path, 
                   generation_mode=False,
@@ -35,7 +35,8 @@ def load_hf_model(model_name_or_path,
         if generation_mode:
             model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
                                                         return_dict=True, 
-                                                        device_map="auto",
+                                                        # device_map="auto",
+                                                        device_map="cuda: 0, 1",
                                                         output_hidden_states=True
                                                         )
             tokenizer = AutoTokenizer.from_pretrained(model_name_or_path,
@@ -49,7 +50,8 @@ def load_hf_model(model_name_or_path,
         # if 'adapter_config.json' not in files:
         model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
                                                     return_dict=True, 
-                                                    device_map="auto",
+                                                    # device_map="auto",
+                                                    device_map="cuda:0",
                                                     output_hidden_states=True
                                                     )
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path,
@@ -115,7 +117,8 @@ def construct_contrastive_dataset(
         return str(round(example, 2))
     
     # template = "Prompt: {}<SEP>Output: {}<SEP>Mean Entropy: {}.<SEP>Token Probs: {}."
-    template = "Prompt: {}<SEP>Output: {}<SEP>Mean Entropy: {}."
+    # template = "Prompt: {}<SEP>Output: {}<SEP>Mean Entropy: {}."
+    template = "Output: {} <SEP> Mean Entropy: {}."
     contrastive_dataset = []
     print(f"Contructing the dataset for contrastive learning...")
     for i in tqdm(range(len(raw_data))):
@@ -124,14 +127,15 @@ def construct_contrastive_dataset(
         mean_entropy = str(raw_data[i]['mean_entropy'])
         token_probs = raw_data[i]['token_probs']
         token_probs = "-".join(list(map(prob_map_fun, token_probs)))
-        contrastive_dataset.append(template.format(prompt, output, mean_entropy, token_probs))
+        # contrastive_dataset.append(template.format(prompt, output, mean_entropy, token_probs))
+        contrastive_dataset.append(template.format(output, mean_entropy))
     print(f"Tokenizing the dataset...")
     tokenized_list = [
         tokenizer(
             text,
             return_tensors="pt",
             padding="max_length",
-            max_length=256,
+            max_length=48,
             truncation=True,
         )
         for text in contrastive_dataset
@@ -200,6 +204,81 @@ class DataCollatorForContrastiveDataset(object):
             input_ids=input_ids,
             attention_mask=attention_mask,
         )
+
+def get_cross_validation_datasets(
+    trajectory_set,
+    model_list: List[str],
+    fold: int,
+):
+    res = {}
+    prompt_number = len(trajectory_set) // len(model_list)
+    assert prompt_number == 600, "error!"
+    
+    # 3-fold cross-validation
+    if fold == 0:
+        trajectory_set_train = trajectory_set.select(
+            list(range(0, 600)) +
+            list(range(4 * prompt_number, 10 * prompt_number)) +
+            list(range(10 * prompt_number, 11 * prompt_number)) + 
+            list(range(14 * prompt_number, 20 * prompt_number)) + 
+            list(range(20 * prompt_number, 21 * prompt_number)) + 
+            list(range(24 * prompt_number, 30 * prompt_number))
+        )
+        trajectory_set_eval = trajectory_set.select(
+            list(range(0, 4 * prompt_number)) + 
+            list(range(10 * prompt_number, 14 * prompt_number)) + 
+            list(range(20 * prompt_number, 24 * prompt_number))
+        )
+        model_list_train = [model_list[i] for i in [0, 4, 5, 6, 7, 8, 9, 10, 14, 15, 16, 17, 18, 19, 20, 24, 25, 26, 27, 28, 29]]
+        model_list_eval = [model_list[i] for i in [0, 1, 2, 3, 10, 11, 12, 13, 20, 21, 22, 23]]
+        
+        res['train'] = trajectory_set_train
+        res['eval'] = trajectory_set_eval
+        
+        return res, model_list_train, model_list_eval
+    
+    if fold == 1:
+        trajectory_set_train = trajectory_set.select(
+            list(range(0, 4 * prompt_number)) +
+            list(range(7 * prompt_number, 10 * prompt_number)) +
+            list(range(10 * prompt_number, 14 * prompt_number)) + 
+            list(range(17 * prompt_number, 20 * prompt_number)) + 
+            list(range(20 * prompt_number, 24 * prompt_number)) + 
+            list(range(27 * prompt_number, 30 * prompt_number))
+        )
+        trajectory_set_eval = trajectory_set.select(
+            list(range(4 * prompt_number, 7 * prompt_number)) + 
+            list(range(14 * prompt_number, 17 * prompt_number)) + 
+            list(range(24 * prompt_number, 27 * prompt_number))
+        )
+        model_list_train = [model_list[i] for i in [0, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 17, 18, 19, 20, 21, 22, 23, 27, 28, 29]]
+        model_list_eval = [model_list[i] for i in [0, 4, 5, 6, 10, 14, 15, 16, 20, 24, 25, 26]]
+        
+        res['train'] = trajectory_set_train
+        res['eval'] = trajectory_set_eval
+        
+        return res, model_list_train, model_list_eval
+    
+    if fold == 2:
+        trajectory_set_train = trajectory_set.select(
+            list(range(0, 7 * prompt_number)) +
+            list(range(7 * prompt_number, 10 * prompt_number)) +
+            list(range(10 * prompt_number, 17 * prompt_number)) + 
+            list(range(20 * prompt_number, 27 * prompt_number))
+        )
+        trajectory_set_eval = trajectory_set.select(
+            list(range(4 * prompt_number, 7 * prompt_number)) + 
+            list(range(14 * prompt_number, 17 * prompt_number)) + 
+            list(range(24 * prompt_number, 27 * prompt_number))
+        )
+        model_list_train = [model_list[i] for i in [0, 1, 2, 3, 4, 5, 6, 10, 11, 12, 13, 14, 15, 16, 20, 21, 22, 23, 24, 25, 26]]
+        model_list_eval = [model_list[i] for i in [0, 7, 8, 9, 10, 17, 18, 19, 20, 27, 28, 29]]
+        
+        res['train'] = trajectory_set_train
+        res['eval'] = trajectory_set_eval
+        
+        return res, model_list_train, model_list_eval
+         
         
 if __name__ == '__main__':
     # data = load_from_disk('./data/trajectory_set')
