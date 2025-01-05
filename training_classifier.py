@@ -9,6 +9,7 @@ import wandb
 
 from utils import *
 from model_list import *
+from evaluation import *
 
 @dataclass
 class ModelArguments:
@@ -27,6 +28,7 @@ class DataArguments:
 class TrainingArguments(transformers.TrainingArguments):
     report_to: str = field(default="wandb")
     run_name: str = field(default='llm-fingerprint-1109')
+    fold: int = field(default=0)
     max_grad_norm: str = field(default=1.0)
     cache_dir: Optional[str] = field(default=None)
     optim: str = field(
@@ -129,7 +131,7 @@ def train():
     
     raw_data = load_from_disk('./data/trajectory_set_train')
     
-    fold = 0
+    fold = training_args.fold
     res, model_list_train, model_list_eval = get_cross_validation_datasets(
         trajectory_set=raw_data,
         model_list=MODEL_LIST_TRAIN,
@@ -156,6 +158,20 @@ def train():
     
     trainer.model.save_pretrained(training_args.output_dir)
     tokenizer.save_pretrained(training_args.output_dir)
+    
+    # Evaluation
+    contrastive_dataset = ContrastiveDataset(
+        construct_contrastive_dataset(
+            tokenizer=tokenizer,
+            raw_data=eval_set,
+            model_list=model_list_eval,
+        )
+    )
+    evaluate_cl(
+        model_list=model_list_eval,
+        contrastive_set=contrastive_dataset,
+        model_name_or_path=training_args.output_dir,
+    )
     
     wandb.finish()
 

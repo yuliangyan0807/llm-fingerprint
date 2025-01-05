@@ -135,7 +135,7 @@ def construct_contrastive_dataset(
             text,
             return_tensors="pt",
             padding="max_length",
-            max_length=48,
+            max_length=72,
             truncation=True,
         )
         for text in contrastive_dataset
