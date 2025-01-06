@@ -265,12 +265,12 @@ def get_cross_validation_datasets(
             list(range(20 * prompt_number, 27 * prompt_number))
         )
         trajectory_set_eval = trajectory_set.select(
-            list(range(0, 1 * prompt_number))
-            list(range(4 * prompt_number, 7 * prompt_number)) + 
+            list(range(0, 1 * prompt_number)) +
+            list(range(7 * prompt_number, 10 * prompt_number)) + 
             list(range(10 * prompt_number, 11 * prompt_number)) + 
-            list(range(14 * prompt_number, 17 * prompt_number)) + 
+            list(range(17 * prompt_number, 20 * prompt_number)) + 
             list(range(20 * prompt_number, 21 * prompt_number)) + 
-            list(range(24 * prompt_number, 27 * prompt_number))
+            list(range(27 * prompt_number, 30 * prompt_number))
         )
         model_list_train = [model_list[i] for i in [0, 1, 2, 3, 4, 5, 6, 10, 11, 12, 13, 14, 15, 16, 20, 21, 22, 23, 24, 25, 26]]
         model_list_eval = [model_list[i] for i in [0, 7, 8, 9, 10, 17, 18, 19, 20, 27, 28, 29]]
