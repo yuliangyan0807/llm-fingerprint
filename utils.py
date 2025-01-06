@@ -1,8 +1,6 @@
 import torch
-import torch.distributed as dist
 import transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from peft import PeftModel, PeftConfig
 import os
 from datasets import Dataset, load_from_disk
 from model_list import *
@@ -10,10 +8,10 @@ from typing import Sequence, Dict, List
 from tqdm import tqdm
 from torch.utils.data import Dataset as ds
 from dataclasses import dataclass
-import numpy as np
+
 
 def load_hf_model(model_name_or_path, 
-                  generation_mode=False,
+                  training_mode=False,
                   device='cuda' if torch.cuda.is_available() else 'cpu'
                   ):
     """
@@ -32,16 +30,15 @@ def load_hf_model(model_name_or_path,
         # Load base model and tokenizer
         print(f"Loading base model '{model_name_or_path}' on {device}...")
         # load model for generation
-        if generation_mode:
+        if training_mode:
             model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
                                                         return_dict=True, 
-                                                        # device_map="auto",
-                                                        device_map="cuda: 0, 1",
+                                                        device_map="auto",
                                                         output_hidden_states=True
                                                         )
             tokenizer = AutoTokenizer.from_pretrained(model_name_or_path,
                                                       use_fast=False,
-                                                      padding_side='left',
+                                                      padding_side='right',
                                                       )
             return model, tokenizer
         
@@ -50,8 +47,7 @@ def load_hf_model(model_name_or_path,
         # if 'adapter_config.json' not in files:
         model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
                                                     return_dict=True, 
-                                                    # device_map="auto",
-                                                    device_map="cuda:0",
+                                                    device_map="auto",
                                                     output_hidden_states=True
                                                     )
         tokenizer = AutoTokenizer.from_pretrained(model_name_or_path,
@@ -247,8 +243,11 @@ def get_cross_validation_datasets(
             list(range(27 * prompt_number, 30 * prompt_number))
         )
         trajectory_set_eval = trajectory_set.select(
+            list(range(0, 1 * prompt_number)) +
             list(range(4 * prompt_number, 7 * prompt_number)) + 
+            list(range(10 * prompt_number, 11 * prompt_number)) +
             list(range(14 * prompt_number, 17 * prompt_number)) + 
+            list(range(20 * prompt_number, 21 * prompt_number)) + 
             list(range(24 * prompt_number, 27 * prompt_number))
         )
         model_list_train = [model_list[i] for i in [0, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 17, 18, 19, 20, 21, 22, 23, 27, 28, 29]]
@@ -262,13 +261,15 @@ def get_cross_validation_datasets(
     if fold == 2:
         trajectory_set_train = trajectory_set.select(
             list(range(0, 7 * prompt_number)) +
-            list(range(7 * prompt_number, 10 * prompt_number)) +
             list(range(10 * prompt_number, 17 * prompt_number)) + 
             list(range(20 * prompt_number, 27 * prompt_number))
         )
         trajectory_set_eval = trajectory_set.select(
+            list(range(0, 1 * prompt_number))
             list(range(4 * prompt_number, 7 * prompt_number)) + 
+            list(range(10 * prompt_number, 11 * prompt_number)) + 
             list(range(14 * prompt_number, 17 * prompt_number)) + 
+            list(range(20 * prompt_number, 21 * prompt_number)) + 
             list(range(24 * prompt_number, 27 * prompt_number))
         )
         model_list_train = [model_list[i] for i in [0, 1, 2, 3, 4, 5, 6, 10, 11, 12, 13, 14, 15, 16, 20, 21, 22, 23, 24, 25, 26]]

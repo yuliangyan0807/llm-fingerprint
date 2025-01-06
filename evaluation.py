@@ -7,7 +7,6 @@ import numpy as np
 from tqdm import tqdm
 from model_list import *
 from datasets import load_from_disk
-# from fig_plot import *
 from transformers import T5EncoderModel, set_seed
 import torch
 import torch.nn.functional as F
@@ -87,6 +86,8 @@ def evaluate_cl(
         ignore_mismatched_sizes=True,
         )
     
+    model = model.eval()
+    
     # l = len(test_trigger_set)
     simlarity_marices = [] # (len(test_trigger_set), 18, 18)
     
@@ -99,6 +100,7 @@ def evaluate_cl(
         }
         last_hidden_states = model(**inputs).last_hidden_state # (18, seq_length, hidden_states)
         aggregated_hidden_states = torch.sum(last_hidden_states, dim=-1) # (18, hidden_states)
+        # aggregated_hidden_states = torch.squeeze(last_hidden_states[:, 0, :]) # (18, hidden_states)
         aggregated_hidden_states = F.normalize(aggregated_hidden_states, dim=-1)
         simlarity_marix = torch.matmul(aggregated_hidden_states, aggregated_hidden_states.T) # (18, 18)
         simlarity_marices.append(simlarity_marix)
@@ -179,8 +181,20 @@ if __name__ == '__main__':
     # model_path = './metric_learning_models/1219_0'
     # model_path = './metric_learning_models/1220_0'
     # model_path = './metric_learning_models/1221_0'
-    model_path = './metric_learning_models/1221_2'
-    # model_path = "google-t5/t5-base"
+    # model_path = './metric_learning_models/1221_2'
+    # model_path = './metric_learning_models/1227_0'
+    # model_path = './metric_learning_models/1227_1'
+    # model_path = './metric_learning_models/1227_2'
+    # model_path = './metric_learning_models/1227_3' # good
+    # model_path = './metric_learning_models/1227_4' # good 72
+    # model_path = './metric_learning_models/1227_5' # good 32
+    # model_path = './metric_learning_models/1227_6' # good 32
+    # model_path = './metric_learning_models/1228_0' # good 48 logits not good
+    # model_path = './metric_learning_models/1229_0' # 72 0.1 good
+    # model_path = './metric_learning_models/1229_1' # 72 0.07 very good
+    model_path = './metric_learning_models/1229_2' # 48 0.07 
+    
+    model_path = "google-t5/t5-base"
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     
     # evaluation on the train models.

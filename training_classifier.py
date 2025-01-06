@@ -156,6 +156,7 @@ def train():
     
     trainer.train()
     
+    training_args.output_dir = training_args.output_dir + f"fold_{fold}"
     trainer.model.save_pretrained(training_args.output_dir)
     tokenizer.save_pretrained(training_args.output_dir)
     
