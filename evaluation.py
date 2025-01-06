@@ -11,7 +11,7 @@ from transformers import T5EncoderModel, set_seed
 import torch
 import torch.nn.functional as F
 from torch.utils.data import random_split, Subset
-from sklearn.metrics import roc_curve, auc, roc_auc_score
+from sklearn.metrics import roc_curve, auc, roc_auc_score, davies_bouldin_score
 
 @torch.no_grad()
 def evaluate(
@@ -105,6 +105,18 @@ def evaluate_cl(
         simlarity_marix = torch.matmul(aggregated_hidden_states, aggregated_hidden_states.T) # (18, 18)
         simlarity_marices.append(simlarity_marix)
     
+    # Compute the success rate.
+    number = len(simlarity_marices)
+    # Only compute the success rate of the suspect models.
+    sr = np.array([0 for i in range(number)])
+    labels = [0, 0, 0, 0, 4, 4, 4, 4, 8, 8, 8, 8]
+    for i in range(number):
+        logits = np.array(simlarity_marices[i])
+        preds = np.argmax(logits, axis=1)
+        mask = np.where(preds == labels)
+        sr[mask] += 1
+    sr = sr / number
+    
     simlarity_marices = torch.stack(simlarity_marices, dim=0)
     # print(simlarity_marices.shape)   
 
@@ -128,10 +140,12 @@ def evaluate_cl(
         # Obtain the i-th (suspect model) row of the simlarity matrix
         llama_pred = mean_simlarity_matrix.detach().numpy()[i,:]
         llama_roc = roc_auc_score(y_true=llama_labels, y_score=llama_pred)
+        llama_db_index = davies_bouldin_score(llama_pred.reshape(-1, 1), llama_labels)
         current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
         print(f"Suspect Model is {current_model}.")
         print(f"Extractor predict on current: {llama_pred}")
         print(f"Roc-auc score of the current: {llama_roc}")
+        print(f"Davies-Bouldin Index of the current: {llama_db_index}")
         print(f"#############################################")
     
     # Qwen Family
@@ -143,10 +157,12 @@ def evaluate_cl(
     for i in range(start, start + model_number_per_family):
         qwen_pred = mean_simlarity_matrix.detach().numpy()[i,:]
         qwen_roc = roc_auc_score(y_true=qwen_labels, y_score=qwen_pred)
+        qwen_db_index = davies_bouldin_score(qwen_pred.reshape(-1, 1), qwen_labels)
         current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
         print(f"Suspect Model is {current_model}.")
         print(f"Extractor predict on current: {qwen_pred}")
         print(f"Roc-auc score of the current: {qwen_roc}")
+        print(f"Davies-Bouldin Index of the current: {qwen_db_index}")
         print(f"#############################################")
     
     # Mistral Family.
@@ -158,12 +174,19 @@ def evaluate_cl(
     for i in range(start, start + model_number_per_family):
         mistral_pred = mean_simlarity_matrix.detach().numpy()[i,:]
         mistral_roc = roc_auc_score(y_true=mistral_labels, y_score=mistral_pred)
+        mistral_db_index = davies_bouldin_score(mistral_pred.reshape(-1, 1), mistral_labels)
         current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
         print(f"Suspect Model is {current_model}.")
         print(f"Extractor predict on current: {mistral_pred}")
         print(f"Roc-auc score of the current: {mistral_roc}")
+        print(f"Davies-Bouldin Index of the current: {mistral_db_index}")
         print(f"#############################################")
     
+    # Print the success rate.
+    for i in range(len(model_list)):
+        if i != 0 and i != 4 and i != 8:
+            print(f"{model_list[i][model_list[i].rfind('/') + 1 : ]}'s success rate: {sr[i] * 100}%")
+            print(f"#############################################")
     
 if __name__ == '__main__':
     set_seed(42)
