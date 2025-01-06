@@ -11,7 +11,7 @@ from transformers import T5EncoderModel, set_seed
 import torch
 import torch.nn.functional as F
 from torch.utils.data import random_split, Subset
-from sklearn.metrics import roc_curve, auc, roc_auc_score, davies_bouldin_score
+from sklearn.metrics import roc_curve, auc, roc_auc_score, davies_bouldin_score, silhouette_score
 
 @torch.no_grad()
 def evaluate(
@@ -77,7 +77,6 @@ def evaluate_cl(
     model_list,
     contrastive_set,
     model_name_or_path: str,
-    # batch_size: int,
 ):  
     model = T5EncoderModel.from_pretrained(
         model_name_or_path,
@@ -141,10 +140,12 @@ def evaluate_cl(
         llama_pred = mean_simlarity_matrix.detach().numpy()[i,:]
         llama_roc = roc_auc_score(y_true=llama_labels, y_score=llama_pred)
         llama_db_index = davies_bouldin_score(llama_pred.reshape(-1, 1), llama_labels)
+        llama_silhouette_score = silhouette_score(llama_pred.reshape(-1, 1), llama_labels)
         current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
         print(f"Suspect Model is {current_model}.")
         print(f"Extractor predict on current: {llama_pred}")
         print(f"Roc-auc score of the current: {llama_roc}")
+        print(f"Silhouette Score of the current: {llama_silhouette_score}")
         print(f"Davies-Bouldin Index of the current: {llama_db_index}")
         print(f"#############################################")
     
@@ -158,10 +159,12 @@ def evaluate_cl(
         qwen_pred = mean_simlarity_matrix.detach().numpy()[i,:]
         qwen_roc = roc_auc_score(y_true=qwen_labels, y_score=qwen_pred)
         qwen_db_index = davies_bouldin_score(qwen_pred.reshape(-1, 1), qwen_labels)
+        qwen_silhouette_score = silhouette_score(qwen_pred.reshape(-1, 1), qwen_labels)
         current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
         print(f"Suspect Model is {current_model}.")
         print(f"Extractor predict on current: {qwen_pred}")
         print(f"Roc-auc score of the current: {qwen_roc}")
+        print(f"Silhouette Score of the current: {qwen_silhouette_score}")
         print(f"Davies-Bouldin Index of the current: {qwen_db_index}")
         print(f"#############################################")
     
@@ -174,19 +177,21 @@ def evaluate_cl(
     for i in range(start, start + model_number_per_family):
         mistral_pred = mean_simlarity_matrix.detach().numpy()[i,:]
         mistral_roc = roc_auc_score(y_true=mistral_labels, y_score=mistral_pred)
+        mistral_silhouette_score = silhouette_score(mistral_pred.reshape(-1, 1), mistral_labels)
         mistral_db_index = davies_bouldin_score(mistral_pred.reshape(-1, 1), mistral_labels)
         current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
         print(f"Suspect Model is {current_model}.")
         print(f"Extractor predict on current: {mistral_pred}")
         print(f"Roc-auc score of the current: {mistral_roc}")
+        print(f"Silhouette Score of the current: {mistral_silhouette_score}")
         print(f"Davies-Bouldin Index of the current: {mistral_db_index}")
         print(f"#############################################")
     
-    # Print the success rate.
-    for i in range(len(model_list)):
-        if i != 0 and i != 4 and i != 8:
-            print(f"{model_list[i][model_list[i].rfind('/') + 1 : ]}'s success rate: {sr[i] * 100}%")
-            print(f"#############################################")
+    # # Print the success rate.
+    # for i in range(len(model_list)):
+    #     if i != 0 and i != 4 and i != 8:
+    #         print(f"{model_list[i][model_list[i].rfind('/') + 1 : ]}'s success rate: {sr[i] * 100}%")
+    #         print(f"#############################################")
     
 if __name__ == '__main__':
     set_seed(42)
@@ -201,13 +206,6 @@ if __name__ == '__main__':
     
     
     # evaluate cl classifier
-    # model_path = './metric_learning_models/1219_0'
-    # model_path = './metric_learning_models/1220_0'
-    # model_path = './metric_learning_models/1221_0'
-    # model_path = './metric_learning_models/1221_2'
-    # model_path = './metric_learning_models/1227_0'
-    # model_path = './metric_learning_models/1227_1'
-    # model_path = './metric_learning_models/1227_2'
     # model_path = './metric_learning_models/1227_3' # good
     # model_path = './metric_learning_models/1227_4' # good 72
     # model_path = './metric_learning_models/1227_5' # good 32
@@ -217,7 +215,6 @@ if __name__ == '__main__':
     # model_path = './metric_learning_models/1229_1' # 72 0.07 very good
     model_path = './metric_learning_models/1229_2' # 48 0.07 
     
-    model_path = "google-t5/t5-base"
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     
     # evaluation on the train models.

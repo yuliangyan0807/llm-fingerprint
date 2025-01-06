@@ -52,7 +52,7 @@ class ContrastiveTrainer(transformers.Trainer):
     def compute_loss(self, 
                      model, 
                      inputs,
-                     temperature=0.07, 
+                     temperature=0.04, 
                      ):
         """
         inputs: Dict{"input_ids", "attention_mask"}.
@@ -156,7 +156,7 @@ def train():
     
     trainer.train()
     
-    training_args.output_dir = training_args.output_dir + f"fold_{fold}"
+    training_args.output_dir = training_args.output_dir + f"_fold_{fold}"
     trainer.model.save_pretrained(training_args.output_dir)
     tokenizer.save_pretrained(training_args.output_dir)
     
