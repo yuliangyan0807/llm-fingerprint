@@ -10,8 +10,7 @@ from datasets import load_from_disk, concatenate_datasets
 from transformers import T5EncoderModel, set_seed
 import torch
 import torch.nn.functional as F
-from torch.utils.data import random_split, Subset
-from sklearn.metrics import roc_curve, auc, roc_auc_score, davies_bouldin_score, silhouette_score
+from sklearn.metrics import roc_auc_score, davies_bouldin_score, silhouette_score
 
 @torch.no_grad()
 def evaluate(
