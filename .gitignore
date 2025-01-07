@@ -2,5 +2,5 @@
 **/logs
 **/figs
 **/instruction_tuning_models
-**/wandb/
+/wandb
 **metric_learning_models
