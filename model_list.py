@@ -61,5 +61,8 @@ MODEL_LIST_UNSEEN = [
   '/mnt/data/hf_models/llama-3.2-3b-instruct/Llama-3.2-3B-Instruct',
   '/mnt/data/hf_models/llama-3.2-3b-instruct/Llama-Doctor-3.2-3B-Instruct', # work
   '/mnt/data/hf_models/llama-3.2-3b-instruct/Llama-Sentient-3.2-3B-Instruct', # work
-  '/mnt/data/hf_models/llama-3.2-3b-instruct/Llama-3.2-3B-Instruct-bnb-4bit',
+  '/mnt/data/hf_models/llama-3.2-3b-instruct/Llama-3.2-3B-Instruct-bnb-4bit', 
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct', 
+  '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct', 
+  '/mnt/data/hf_models/mistral-7b-instruct/Mistral-7B-Instruct-v0.1', 
 ]

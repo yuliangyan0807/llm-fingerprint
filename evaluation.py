@@ -6,7 +6,7 @@ from itertools import combinations
 import numpy as np
 from tqdm import tqdm
 from model_list import *
-from datasets import load_from_disk
+from datasets import load_from_disk, concatenate_datasets
 from transformers import T5EncoderModel, set_seed
 import torch
 import torch.nn.functional as F
@@ -192,7 +192,73 @@ def evaluate_cl(
     #     if i != 0 and i != 4 and i != 8:
     #         print(f"{model_list[i][model_list[i].rfind('/') + 1 : ]}'s success rate: {sr[i] * 100}%")
     #         print(f"#############################################")
+
+@torch.no_grad()
+def evaluate_cl_unseen(
+    trajectory_set_train, 
+    trajectory_set_unseen, 
+    tokenizer, 
+    model_name_or_path: str, 
+):
+    # Select the base models' trajectory.
+    base_trajectory = trajectory_set_train.select(
+        list(range(0, 600)) + 
+        list(range(10 * 600, 11 * 600)) + 
+        list(range(20 * 600, 21 * 600))
+    )
     
+    # Construct the fianl dataset.
+    dataset = concatenate_datasets([trajectory_set_unseen, base_trajectory])
+    contrastive_set = construct_contrastive_dataset(
+        tokenizer=tokenizer, 
+        raw_data=dataset, 
+        model_list=MODEL_LIST_UNSEEN
+    )
+    
+    model = T5EncoderModel.from_pretrained(
+        model_name_or_path,
+        # device_map='auto',
+        output_hidden_states=True,
+        ignore_mismatched_sizes=True,
+    )
+    
+    model = model.eval()
+    
+    simlarity_marices = []
+    # Obtain the similarity matrix.
+    for sample in tqdm(contrastive_set):
+        batch_input_ids = sample['input_ids']
+        batch_attention_mask = sample['attention_mask']
+        inputs = {
+            'input_ids' : torch.tensor(batch_input_ids),
+            'attention_mask' : torch.tensor(batch_attention_mask),
+        }
+        last_hidden_states = model(**inputs).last_hidden_state
+        aggregated_hidden_states = torch.sum(last_hidden_states, dim=-1)
+        # aggregated_hidden_states = torch.squeeze(last_hidden_states[:, 0, :]) # (18, hidden_states)
+        aggregated_hidden_states = F.normalize(aggregated_hidden_states, dim=-1)
+        simlarity_marix = torch.matmul(aggregated_hidden_states, aggregated_hidden_states.T)
+        simlarity_marices.append(simlarity_marix)
+    
+    simlarity_marices = torch.stack(simlarity_marices, dim=0)
+    # print(simlarity_marices.shape)   
+
+    mean_simlarity_matrix = torch.mean(simlarity_marices, dim=0)
+    # print(mean_simlarity_matrix.shape)
+    
+    print(f"Start Evaluating...")
+    llama3_2_labels = [1, 1, 1, 1, 0, 0, 0]
+    for i in range(0, 4):
+        llama3_2_pred = mean_simlarity_matrix.detach().numpy()[i,:]
+        llama3_2_auc = roc_auc_score(y_true=llama3_2_labels, y_score=llama3_2_pred)
+        llama3_2_silhouette_score = silhouette_score(llama3_2_pred.reshape(-1, 1), llama3_2_labels)
+        current_model = MODEL_LIST_UNSEEN[i][MODEL_LIST_UNSEEN[i].rfind('/') + 1 : ]
+        print(f"Current Model is: {current_model}")
+        print(f"Extractor predict on current: {llama3_2_pred}")
+        print(f"Roc-auc score of the current: {llama3_2_auc}")
+        print(f"Silhouette Score of the current: {llama3_2_silhouette_score}")
+        print(f"#############################################")
+        
 if __name__ == '__main__':
     set_seed(42)
         
@@ -213,25 +279,27 @@ if __name__ == '__main__':
     # model_path = './metric_learning_models/1228_0' # good 48 logits not good
     # model_path = './metric_learning_models/1229_0' # 72 0.1 good
     # model_path = './metric_learning_models/1229_1' # 72 0.07 very good
-    model_path = './metric_learning_models/1229_2' # 48 0.07 
+    # model_path = './metric_learning_models/1229_2' # 48 0.07 
+    model_path = './metric_learning_models/0106_2_fold_2'
     
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     
     # evaluation on the train models.
     raw_data = load_from_disk('./data/trajectory_set_train')
-    contrastive_dataset_evaluation = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer,
-                                                                                      raw_data=raw_data,
-                                                                                      model_list=MODEL_LIST_TRAIN))
-    
-
-    # evaluation on the test models.
-    # raw_data = load_from_disk('./data/trajectory_set_evaluation')
     # contrastive_dataset_evaluation = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer,
     #                                                                                   raw_data=raw_data,
-    #                                                                                   model_list=MODEL_LIST_TEST))
+    #                                                                                   model_list=MODEL_LIST_TRAIN))
     
     
-    evaluate_cl(model_list=MODEL_LIST_TRAIN,
-                contrastive_set=contrastive_dataset_evaluation,
-                model_name_or_path=model_path,
-            )
+    # evaluate_cl(model_list=MODEL_LIST_TRAIN,
+    #             contrastive_set=contrastive_dataset_evaluation,
+    #             model_name_or_path=model_path,
+    #         )
+    
+    trajectory_set_unseen = load_from_disk('./data/trajectory_set_unseen')
+    evaluate_cl_unseen(
+        trajectory_set_train=raw_data, 
+        trajectory_set_unseen=trajectory_set_unseen, 
+        tokenizer=tokenizer, 
+        model_name_or_path=model_path, 
+    )
