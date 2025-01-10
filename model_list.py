@@ -66,3 +66,27 @@ MODEL_LIST_UNSEEN = [
   '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct', 
   '/mnt/data/hf_models/mistral-7b-instruct/Mistral-7B-Instruct-v0.1', 
 ]
+
+MODEL_LIST_FOLD_0 = [
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct', 
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-ARC-Potpourri-Induction-8B', 
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-8B-Instruct-FP8', 
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/llama_3.1_8b_prop_logic_ft', 
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/llama-3.1-8b-instruct-ultrafeedback-single-judge', 
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/Skywork', 
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-GPTQ-Q_8', 
+  '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct', 
+  '/mnt/data/hf_models/qwen-2.5-7b-instruct/FinancialAdvice-Qwen2.5-7B', 
+  '/mnt/data/hf_models/qwen-2.5-7b-instruct/cybertron-v4-qw7B-UNAMGS', 
+  '/mnt/data/hf_models/qwen-2.5-7b-instruct/qwen2.5-7B-instruct-simpo', 
+  '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct-Uncensored',
+  '/mnt/data/hf_models/qwen-2.5-7b-instruct/T.E-8.1',
+  '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen-Rui-SE',
+  '/mnt/data/hf_models/mistral-7b-instruct/Mistral-7B-Instruct-v0.1', 
+  '/mnt/data/hf_models/mistral-7b-instruct/mistral_instruct_generation',
+  '/mnt/data/hf_models/mistral-7b-instruct/radia-fine-tune-mistral-7b-lora',
+  '/mnt/data/hf_models/mistral-7b-instruct/Mistral-7B-Instruct-v0.1_asm_60e4dc58', 
+  '/mnt/data/hf_models/mistral-7b-instruct/original_glue_boolq', 
+  '/mnt/data/hf_models/mistral-7b-instruct/WeniGPT-Mistral-7B-instructBase', 
+  '/mnt/data/hf_models/mistral-7b-instruct/finetuned-mistral-7b',
+]

@@ -1,5 +1,3 @@
-import random
-import numpy as np
 from datasets import load_dataset, Dataset, load_from_disk
 from model_list import *
 from metrics import *
@@ -8,10 +6,9 @@ from tqdm import tqdm
 from typing import List
 from utils import *
 from datasets import load_from_disk, Dataset
+from transformers import T5EncoderModel
 import warnings
-from itertools import combinations
 from transformers import set_seed
-import os
 
 def pre_generate_trajectory(
     model_list: List[str],
@@ -62,122 +59,98 @@ def pre_generate_trajectory(
     optimized_trigger_set = Dataset.from_dict(optimized_trigger_set)
     optimized_trigger_set.save_to_disk('./data/trajectory_set_unseen')
 
-def optimize_prompts_with_pair_sampling( 
-                                        model_list, 
-                                        M=10, 
-                                        sample_size=100, 
-                                        alpha=1.0, 
-                                        beta=1.0, 
-                                        ):
+def optimize_triggers(
+    trajectory_set, 
+    model_list: List[str], 
+    family_name: str, 
+    tokenizer, 
+    model_path: str, 
+    fold: int, 
+    threshold: int, 
+) -> Dataset:
     """
     Finds M optimized prompts from trigger_set by maximizing intra-model similarity and inter-model divergence with pair sampling.
 
     Parameters:
-    - models: List of models.
-    - M: Number of optimized prompts to find.
-    - sample_size: Number of prompts to sample for evaluation.
-    - alpha: Weight for intra-model similarity.
-    - beta: Weight for inter-model divergence.
-    - subset_size: Number of model pairs to sample for inter-model divergence.
+    - trajectory_set: pre-collected trajectories towards the prompt. 
+    - model_list: List of models. 
+    - family_name: victim model family. 
+    - fold: current fold to be optimized. 
 
     Returns:
     - List of optimized prompts.
     """
+    assert family_name in ['llama', 'mistral', 'qwen'], "Out of the family pre-defined!"
+    
     print(f"loading dataset...")
-    trigger_set = load_from_disk('./data/optimized_trigger')
     original_trigger_set = load_from_disk('./data/seed_trigger_set')
-    # get the number of models
-    model_number = len(model_list)
-    prompt_number = len(trigger_set) // model_number
-    # For recording the trigger's importance socre
-    prompt_weights = []
+    prompt_number = len(original_trigger_set)
+    assert prompt_number == 600, "error!"
     
+    print(f"Loading the extractor...")
+    model = T5EncoderModel.from_pretrained(
+        model_path, 
+        output_hidden_states=True,
+        ignore_mismatched_sizes=True, 
+    )
+
+    # Each fold has a subset of the trigger set. 
+    res, model_list_train, model_list_eval = get_cross_validation_datasets(
+        trajectory_set=trajectory_set, 
+        model_list=model_list, 
+        fold=fold
+    )
+    
+    # Specify the target family. 
+    model_number_per_family = len(trajectory_set) // 3
+    if family_name == 'llama':
+        target_index = 0
+    elif family_name == 'qwen':
+        target_index = 7
+    else:
+        target_index = 14
+    
+    ideal_value = model_number_per_family - 1
+        
+    contrastive_dataset = construct_contrastive_dataset(
+        tokenizer=tokenizer, 
+        raw_data=res['train'], 
+        model_list=model_list_train, 
+        select_trigger=True, 
+    )
+    
+    # We only need to save the index of the prompt. 
+    optimized_trigger_set = []    
     # iterate each prompt
-    print(f"start to initial search")
-    for i in tqdm(range(prompt_number)):
-        # given the prompt, select the corresponding output of each model
-        select_indices = [k * prompt_number + i for k in range(model_number)]
-        # base models are orginal models, so an instruction tuning version model is also a base model here.
-        base_model_indices = range(0, model_number, 2)
-        assert len(base_model_indices) * 2 == model_number, "length error!"
+    print(f"Start to search...")
+    for i, sample in enumerate(contrastive_dataset):
+        batch_input_ids = sample['input_ids']
+        batch_attention_mask = sample['attention_mask']
+        inputs = {
+            'input_ids' : torch.tensor(batch_input_ids),
+            'attention_mask' : torch.tensor(batch_attention_mask),
+        }
+        last_hidden_states = model(**inputs).last_hidden_state
+        aggregated_hidden_states = torch.sum(last_hidden_states, dim=-1)
+        aggregated_hidden_states = F.normalize(aggregated_hidden_states, dim=-1)
+        simlarity_marix = torch.matmul(aggregated_hidden_states, aggregated_hidden_states.T)
+        # simlarity_marices.append(simlarity_marix)
         
-        # Compute the intra similarity score
-        intra_sim_score = []
-        for j in base_model_indices:
-            tokens1 = trigger_set[select_indices[j]]['tokens']
-            tokens2 = trigger_set[select_indices[j + 1]]['tokens']
-            intra_sim_score += [compute_intra_model_similarity(tokens1=tokens1, tokens2=tokens2)]    
-        assert len(intra_sim_score) == model_number // 2, "length error!"
-        
-        inter_div_score = []
-        # filter out the model and its fine tuning version pari
-        forbidden_pairs = [(i, i + 1) for i in base_model_indices]
-        model_pairs = [pair for pair in combinations(range(model_number), r=2) if pair not in forbidden_pairs]
-        # Iterate all the possible pairs
-        for pair in model_pairs:
-            tokens1 = trigger_set[select_indices[pair[0]]]['tokens']
-            tokens2 = trigger_set[select_indices[pair[1]]]['tokens']
-            inter_div_score += [compute_inter_model_divergence(tokens1=tokens1, tokens2=tokens2)]
-
-        intra_score = sum(intra_sim_score) / len(intra_sim_score)
-        inter_score = sum(inter_div_score) / len(inter_div_score)
-        
-        prompt_weights.append(max(alpha * intra_score - beta * inter_score, 0))
-
-    # Normalize weights to form a probability distribution
-    total_weight = sum(prompt_weights)
-    prompt_probs = [weight / total_weight for weight in prompt_weights]
-    assert len(prompt_probs) == prompt_number, "length error!"
-
-    # Sample prompts indices based on their importance weights
-    candidate_prompts_indices = random.choices(range(prompt_number), 
-                                              weights=prompt_probs, 
-                                              k=sample_size)
-    candidate_prompts_indices = list(set(candidate_prompts_indices))
-    prompt_scores = []
-
-    print(f"start to search the final trigger set")
-    for i in tqdm(candidate_prompts_indices):
-        # given the prompt, select the corresponding output of each model
-        select_indices = [k * prompt_number + i for k in range(model_number)]
-        # base models are orginal models, so an instruction tuning version model is also a base model here.
-        base_model_indices = range(0, model_number, 2)
-        
-        # Compute the intra similarity score
-        intra_sim_score = []
-        for j in base_model_indices:
-            entropy1 = trigger_set[select_indices[j]]['mean_entropy']
-            entropy2 = trigger_set[select_indices[j + 1]]['mean_entropy']
-            intra_sim_score += [abs(entropy1 - entropy2)]
-        
-        inter_div_score = []
-        # filter out the model and its fine tuning version pari
-        forbidden_pairs = [(i, i + 1) for i in base_model_indices]
-        model_pairs = [pair for pair in combinations(range(model_number), r=2) if pair not in forbidden_pairs]
-        # Iterate all the possible pairs
-        for pair in model_pairs:
-            entropy1 = trigger_set[select_indices[j]]['mean_entropy']
-            entropy2 = trigger_set[select_indices[j + 1]]['mean_entropy']
-            inter_div_score += [abs(entropy1 - entropy2)]
-
-        intra_score = sum(intra_sim_score) / len(intra_sim_score)
-        inter_socre = sum(inter_div_score) / len(inter_div_score)
-        # Based on the entropy, we expect the intra score is low.
-        score = beta * inter_socre - alpha * intra_score
-        prompt_scores.append((i, score))
-        
-    assert len(prompt_scores) == len(candidate_prompts_indices)
+        target_logits = torch.argmax(simlarity_marix[target_index + 1: target_index + model_number_per_family, :], dim=1)
+        # Count the number of the suspect models has the most similary with the victim model. 
+        val = torch.sum(target_logits == target_index).item()
+        if val >= threshold:
+            optimized_trigger_set.append(i)
+            print(original_trigger_set[i])
     
-    # Sort and select the top M prompts
-    optimized_prompts_indices = sorted(prompt_scores, key=lambda x: x[1], reverse=True)[:M]
-    indices = [i for i, score in optimized_prompts_indices]
-    prompts = original_trigger_set.select(indices)['prompt']
-    data = {"prompt" : prompts}
-    data = Dataset.from_dict(data)
+    dataset = {
+        'prompt_index' : optimized_trigger_set
+    }
+    dataset = Dataset.from_dict(dataset)
+    save_dir = f"./data/optimized_trigger_set_{family_name}_{fold}"
+    dataset.save_to_disk(save_dir)
     
-    data.save_to_disk('./data/final_trigger_set')
-    
-    return data
+    return dataset
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')

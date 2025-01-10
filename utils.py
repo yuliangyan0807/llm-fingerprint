@@ -84,7 +84,8 @@ def construct_contrastive_dataset(
     tokenizer: transformers.PreTrainedTokenizer,
     raw_data,
     model_list,
-    save: bool=False,
+    select_trigger: bool=False, 
+    save: bool=False, 
     ):
     """
     Constructs contrastive learning samples for each data point.
@@ -158,7 +159,11 @@ def construct_contrastive_dataset(
             'attention_mask' : attention_masks,
             }
     dataset = Dataset.from_dict(data)
-    dataset = dataset.shuffle(seed=42)
+    if select_trigger: 
+        # If we are going to select the triggers, we should not shuffle the dataset. 
+        dataset = dataset
+    else:
+        dataset = dataset.shuffle(seed=42)
     if save == True:
         dataset.save_to_disk('./data/contrastive_set')
     
