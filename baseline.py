@@ -1,12 +1,18 @@
 import torch
 import numpy as np
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 from typing import List
+from tqdm import tqdm
+# from datasets import load_from_disk
+
+from utils import *
+from model_list import *
 
 def calculate_dimension_difference(
-    victim_model_name: str,
-    suspected_model,
-    query_set: List[str],
+    victim_model, 
+    suspected_model, 
+    tokenizer, 
+    query_set, 
     N: int,
     error_term: float
 ):
@@ -31,33 +37,39 @@ def calculate_dimension_difference(
     Delta_r : int
         The calculated dimension difference.
     """
-    # Load the victim causal language model
-    victim_model = AutoModelForCausalLM.from_pretrained(victim_model_name)
-    victim_model.eval()
-    tokenizer = AutoTokenizer.from_pretrained(victim_model_name)
+    # # Load the victim causal language model
+    # victim_model = AutoModelForCausalLM.from_pretrained(victim_model_name)
+    # victim_model.eval()
+    # tokenizer = AutoTokenizer.from_pretrained(victim_model_name)
     
     # Get the weight matrix of the final linear layer
     W = victim_model.lm_head.weight.detach()  # Shape: (vocab_size, hidden_size)
     W = W.cpu().numpy()  # Convert to NumPy for matrix operations
 
     # Initialize parameters
-    Delta_r = 0
+    delta_r = 0
     n = 0
     S = []  # Store the sampled logits
     
+    # query_set = list(query_set['prompt'])
     # Step 1: Query the suspected model
     while n <= N:
         # Randomly sample a query q
         query = np.random.choice(query_set)
         
         # Tokenize the query and get the logits from the suspected model
-        inputs = tokenizer(query, return_tensors="pt")
+        inputs = tokenizer(query, return_tensors="pt").to(suspected_model.device)
         with torch.no_grad():
-            logits = suspected_model(**inputs).logits  # Shape: (batch_size, seq_length, vocab_size)
+            logits = suspected_model(
+                **inputs, 
+        ).logits  # Shape: (batch_size, seq_length, vocab_size)
         
         # Aggregate the logits (e.g., take the last token output)
-        O = logits[:, -1, :].squeeze().cpu().numpy()  # Shape: (vocab_size,)
-        S.append(O)
+        O = logits.view(-1, logits.size(-1)).cpu().numpy() # (batch_size * seq_length, vocab_size)
+        # O = logits[:, -1, :].squeeze().cpu().numpy()  # Shape: (vocab_size,)
+        for logit in O:
+            S.append(logit)
+        # S.append(O)
         n = len(S)
     
     # Step 2: Calculate the dimension difference
@@ -72,22 +84,76 @@ def calculate_dimension_difference(
         
         # If the error exceeds the threshold, increment Delta_r
         if di > error_term:
-            Delta_r += 1
+            delta_r += 1
     
-    return Delta_r
+    return delta_r
 
+def run(
+    model_list: List[str], 
+    victim_family: str, 
+    sample_size: int, 
+):
+    # Fix the random seed. 
+    set_seed(42)
+    
+    # Prompt set. 
+    query_set = load_from_disk('./data/seed_trigger_set')
+    # Random sampling. 
+    query_set = query_set.shuffle(seed=42)
+    query_set = query_set.select(range(sample_size))
+    # Transform to the array. 
+    query_set = list(query_set['prompt'])
+    
+    assert victim_family in ['llama', 'qwen', 'mistral'], "not a legel family!"
+    if victim_family == 'llama':
+        victim_model, tokenizer = load_hf_model(
+            '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct', 
+        )
+        index = 0
+    elif victim_family == 'qwen':
+        victim_model, tokenizer = load_hf_model(
+            '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct', 
+        )
+        index = 1
+    else:
+        victim_model, tokenizer = load_hf_model(
+            '/mnt/data/hf_models/mistral-7b-instruct/Mistral-7B-Instruct-v0.1', 
+        )
+        index = 2
+        
+    model_list = np.array(model_list)
+    model_list_ = np.delete(model_list, index)
+    
+    preds = []
+    for model in tqdm(model_list_):
+        suspected_model, _ = load_hf_model(
+            model_name_or_path=model
+        )
+        
+        delta_r = calculate_dimension_difference(
+            victim_model=victim_model, 
+            suspected_model=suspected_model, 
+            tokenizer=tokenizer, 
+            query_set=query_set, 
+            N=1500, 
+            error_term=1e-5, 
+        )
+        
+        preds.append(delta_r)
+
+    model_number = len(model_list)
+    labels = np.zeros(model_number)
+    labels[index : index + 10] = 1
+    
+    print(preds)
+    
 if __name__ == "__main__":
-    # Victim and suspected model configuration
-    victim_model_name = "gpt2"
     
-    # Assuming the suspected model behaves like the victim model for demonstration
-    suspected_model = AutoModelForCausalLM.from_pretrained("gpt2")
-    
-    # Define the query set and parameters
-    query_set = ["Hello world!", "How are you?", "This is a test.", "Causal language models are powerful."]
-    N = 10
-    error_term = 1e-3
 
     # Calculate the dimension difference
-    delta_r = calculate_dimension_difference(victim_model_name, suspected_model, query_set, N, error_term)
-    print(f"Dimension Difference (Delta r): {delta_r}")
+    run(
+        model_list=MODEL_LIST_TRAIN, 
+        victim_family='llama', 
+        sample_size=100, 
+    )
+    # print(f"Dimension Difference (Delta r): {delta_r}")
