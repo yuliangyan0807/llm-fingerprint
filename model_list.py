@@ -28,7 +28,9 @@ MODEL_LIST_TRAIN = [
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Unsloth-Meta-Llama-3.1-8B-Instruct', # work
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-SuperNova-Lite', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-ARC-Potpourri-Induction-8B', 
-  '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-8B-Instruct-FP8', 
+  # '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-8B-Instruct-FP8', # BUG
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/GPM-Llama-3.1-8B-Instruct', 
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-SwiftKV-8B-Instruct', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/llama_3.1_8b_prop_logic_ft', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/llama-3.1-8b-instruct-ultrafeedback-single-judge', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Skywork', 
