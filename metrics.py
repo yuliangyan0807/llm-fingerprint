@@ -111,4 +111,16 @@ def get_perplexity(text):
     results = perplexity.compute(predictions=[text],
                                  model_id='/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B/')
     
-    return results['mean_perplexity']        
+    return results['mean_perplexity']
+
+def s_index(
+    current_index: int, 
+    start: int, 
+    model_number_per_family: int, 
+    y_score, 
+):
+
+    intra_distance = 1 / ((np.sum(y_score[start: start + model_number_per_family]) - y_score[current_index]) / (model_number_per_family - 1))
+    inter_distance = 1 / ((np.sum(y_score) - np.sum(y_score[start: start + model_number_per_family])) / (len(y_score) - model_number_per_family))
+    
+    return inter_distance / intra_distance

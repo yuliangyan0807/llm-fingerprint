@@ -30,7 +30,6 @@ MODEL_LIST_TRAIN = [
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-ARC-Potpourri-Induction-8B', 
   # '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-8B-Instruct-FP8', # BUG
   '/mnt/data/hf_models/llama-3.1-8b-instruct/GPM-Llama-3.1-8B-Instruct', 
-  '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-SwiftKV-8B-Instruct', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/llama_3.1_8b_prop_logic_ft', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/llama-3.1-8b-instruct-ultrafeedback-single-judge', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Skywork', 
@@ -63,10 +62,11 @@ MODEL_LIST_UNSEEN = [
   '/mnt/data/hf_models/llama-3.2-3b-instruct/Llama-3.2-3B-Instruct',
   '/mnt/data/hf_models/llama-3.2-3b-instruct/Llama-Doctor-3.2-3B-Instruct', # work
   '/mnt/data/hf_models/llama-3.2-3b-instruct/Llama-Sentient-3.2-3B-Instruct', # work
-  '/mnt/data/hf_models/llama-3.2-3b-instruct/Llama-3.2-3B-Instruct-bnb-4bit', 
+  '/mnt/data/hf_models/llama-3.2-3b-instruct/Llama-3.2-3B-Instruct-bnb-4bit', # BUG
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct', 
   '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct', 
   '/mnt/data/hf_models/mistral-7b-instruct/Mistral-7B-Instruct-v0.1', 
+    '/mnt/data/hf_models/llama-3.2-3b-instruct/tinyllama-bnb-4bit', 
 ]
 
 MODEL_LIST_FOLD_0 = [

@@ -81,7 +81,7 @@ def calculate_dimension_difference(
         si = S[i]  # i-th sampled logits
         
         # Handle the dimension issues. 
-        ground_truth_dim = len(W[0])
+        ground_truth_dim = len(W) # Vocab size
         if len(si) < ground_truth_dim:
             si = np.pad(si, (0, ground_truth_dim - len(si)), mode='constant', constant_values=0)
         else:

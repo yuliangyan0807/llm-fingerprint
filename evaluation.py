@@ -1,16 +1,17 @@
-from metrics import *
-from generation import *
 from typing import List
 from utils import load_hf_model
 from itertools import combinations
 import numpy as np
 from tqdm import tqdm
-from model_list import *
 from datasets import load_from_disk, concatenate_datasets
 from transformers import T5EncoderModel, set_seed
 import torch
 import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score, davies_bouldin_score, silhouette_score
+
+from metrics import *
+from generation import *
+from model_list import *
 
 @torch.no_grad()
 def evaluate(
@@ -139,12 +140,14 @@ def evaluate_cl(
         llama_pred = mean_simlarity_matrix.detach().numpy()[i,:]
         # Ignore suspect model itself. 
         llama_roc = roc_auc_score(y_true=np.delete(llama_labels, i), y_score=np.delete(llama_pred, i))
+        llama_s_index = s_index(current_index=i, start=start, model_number_per_family=model_number_per_family, y_score=llama_pred)
         llama_db_index = davies_bouldin_score(llama_pred.reshape(-1, 1), llama_labels)
         llama_silhouette_score = silhouette_score(llama_pred.reshape(-1, 1), llama_labels)
         current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
         print(f"Suspect Model is {current_model}.")
         print(f"Extractor predict on current: {llama_pred}")
         print(f"Roc-auc score of the current: {llama_roc}")
+        print(f"S-Index of the current: {llama_s_index}")
         print(f"Silhouette Score of the current: {llama_silhouette_score}")
         print(f"Davies-Bouldin Index of the current: {llama_db_index}")
         print(f"#############################################")
@@ -158,12 +161,14 @@ def evaluate_cl(
     for i in range(start, start + model_number_per_family):
         qwen_pred = mean_simlarity_matrix.detach().numpy()[i,:]
         qwen_roc = roc_auc_score(y_true=np.delete(qwen_labels, i), y_score=np.delete(qwen_pred, i))
+        qwen_s_index = s_index(current_index=i, start=start, model_number_per_family=model_number_per_family, y_score=qwen_pred)
         qwen_db_index = davies_bouldin_score(qwen_pred.reshape(-1, 1), qwen_labels)
         qwen_silhouette_score = silhouette_score(qwen_pred.reshape(-1, 1), qwen_labels)
         current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
         print(f"Suspect Model is {current_model}.")
         print(f"Extractor predict on current: {qwen_pred}")
         print(f"Roc-auc score of the current: {qwen_roc}")
+        print(f"S-Index of the current: {qwen_s_index}")
         print(f"Silhouette Score of the current: {qwen_silhouette_score}")
         print(f"Davies-Bouldin Index of the current: {qwen_db_index}")
         print(f"#############################################")
@@ -177,12 +182,14 @@ def evaluate_cl(
     for i in range(start, start + model_number_per_family):
         mistral_pred = mean_simlarity_matrix.detach().numpy()[i,:]
         mistral_roc = roc_auc_score(y_true=np.delete(mistral_labels, i), y_score=np.delete(mistral_pred, i))
+        mistral_s_index = s_index(current_index=i, start=start, model_number_per_family=model_number_per_family, y_score=mistral_pred)
         mistral_silhouette_score = silhouette_score(mistral_pred.reshape(-1, 1), mistral_labels)
         mistral_db_index = davies_bouldin_score(mistral_pred.reshape(-1, 1), mistral_labels)
         current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
         print(f"Suspect Model is {current_model}.")
         print(f"Extractor predict on current: {mistral_pred}")
         print(f"Roc-auc score of the current: {mistral_roc}")
+        print(f"S-Index score of the current: {mistral_s_index}")
         print(f"Silhouette Score of the current: {mistral_silhouette_score}")
         print(f"Davies-Bouldin Index of the current: {mistral_db_index}")
         print(f"#############################################")
@@ -259,6 +266,35 @@ def evaluate_cl_unseen(
         print(f"Silhouette Score of the current: {llama3_2_silhouette_score}")
         print(f"#############################################")
         
+def cross_fold_evaluation(
+    model_path, 
+    fold: int, 
+):
+    raw_data = load_from_disk('./data/trajectory_set_train')
+    
+    res, model_list_train, model_list_eval = get_cross_validation_datasets(
+        trajectory_set=raw_data,
+        model_list=MODEL_LIST_TRAIN,
+        fold=fold
+    )
+    
+    train_set, eval_set = res['train'], res['eval']
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    
+    contrastive_dataset = ContrastiveDataset(
+        construct_contrastive_dataset(
+            tokenizer=tokenizer,
+            raw_data=eval_set,
+            model_list=model_list_eval,
+        )
+    )
+    
+    evaluate_cl(
+        model_list=model_list_eval,
+        contrastive_set=contrastive_dataset,
+        model_name_or_path=model_path, 
+    )
+        
 if __name__ == '__main__':
     set_seed(42)
         
@@ -280,26 +316,21 @@ if __name__ == '__main__':
     # model_path = './metric_learning_models/1229_0' # 72 0.1 good
     # model_path = './metric_learning_models/1229_1' # 72 0.07 very good
     # model_path = './metric_learning_models/1229_2' # 48 0.07 
-    model_path = './metric_learning_models/0106_2_fold_2'
+    model_path = './metric_learning_models/0115_2_fold_2_fold_2'
     
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     
     # evaluation on the train models.
     raw_data = load_from_disk('./data/trajectory_set_train')
-    # contrastive_dataset_evaluation = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer,
-    #                                                                                   raw_data=raw_data,
-    #                                                                                   model_list=MODEL_LIST_TRAIN))
-    
-    
-    # evaluate_cl(model_list=MODEL_LIST_TRAIN,
-    #             contrastive_set=contrastive_dataset_evaluation,
-    #             model_name_or_path=model_path,
-    #         )
-    
-    trajectory_set_unseen = load_from_disk('./data/trajectory_set_unseen')
-    evaluate_cl_unseen(
-        trajectory_set_train=raw_data, 
-        trajectory_set_unseen=trajectory_set_unseen, 
-        tokenizer=tokenizer, 
-        model_name_or_path=model_path, 
+    cross_fold_evaluation(
+        model_path=model_path, 
+        fold=2, 
     )
+    
+    # trajectory_set_unseen = load_from_disk('./data/trajectory_set_unseen')
+    # evaluate_cl_unseen(
+    #     trajectory_set_train=raw_data, 
+    #     trajectory_set_unseen=trajectory_set_unseen, 
+    #     tokenizer=tokenizer, 
+    #     model_name_or_path=model_path, 
+    # )
