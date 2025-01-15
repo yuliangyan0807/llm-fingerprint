@@ -3,7 +3,8 @@ import numpy as np
 from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 from typing import List
 from tqdm import tqdm
-# from datasets import load_from_disk
+from sklearn.metrics import roc_curve, auc, roc_auc_score
+import matplotlib.pyplot as plt
 
 from utils import *
 from model_list import *
@@ -71,11 +72,21 @@ def calculate_dimension_difference(
             S.append(logit)
         # S.append(O)
         n = len(S)
+    if n > N:
+        S = S[: N]
     
     # Step 2: Calculate the dimension difference
-    for i in range(n):
+    for i in tqdm(range(len(S))):
         # Solve Wx = s_i to get x_hat
         si = S[i]  # i-th sampled logits
+        
+        # Handle the dimension issues. 
+        ground_truth_dim = len(W[0])
+        if len(si) < ground_truth_dim:
+            si = np.pad(si, (0, ground_truth_dim - len(si)), mode='constant', constant_values=0)
+        else:
+            si = si[:ground_truth_dim]
+            
         x_hat, _, _, _ = np.linalg.lstsq(W, si, rcond=None)  # Solve W * x_hat ≈ s_i
         
         # Calculate the reconstruction error (di)
@@ -135,15 +146,34 @@ def run(
             suspected_model=suspected_model, 
             tokenizer=tokenizer, 
             query_set=query_set, 
-            N=1500, 
+            N=10, 
             error_term=1e-5, 
         )
         
         preds.append(delta_r)
 
+    # Evaluation.
     model_number = len(model_list)
     labels = np.zeros(model_number)
     labels[index : index + 10] = 1
+    labels_ = np.delete(labels, index)
+    assert len(labels_) == len(preds), "length error! Line 150."
+    
+    fpr, tpr, thresholds = roc_curve(y_true=labels_, y_scores=preds)
+    roc_auc = auc(fpr, tpr)
+    
+    plt.figure()
+    plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic')
+    plt.legend(loc="lower right")
+    plt.show()
+    
+    print(f"ROC-AUC Score of {victim_family.capitalize()}: {roc_auc_score(y_true=labels_, y_score=preds)}")
     
     print(preds)
     
@@ -154,6 +184,6 @@ if __name__ == "__main__":
     run(
         model_list=MODEL_LIST_TRAIN, 
         victim_family='llama', 
-        sample_size=100, 
+        sample_size=300, 
     )
     # print(f"Dimension Difference (Delta r): {delta_r}")
