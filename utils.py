@@ -1,13 +1,15 @@
 import torch
 import transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel, PeftConfig
 import os
 from datasets import Dataset, load_from_disk
-from model_list import *
 from typing import Sequence, Dict, List
 from tqdm import tqdm
 from torch.utils.data import Dataset as ds
 from dataclasses import dataclass
+
+from model_list import *
 
 
 def load_hf_model(model_name_or_path, 
@@ -44,36 +46,47 @@ def load_hf_model(model_name_or_path,
         
         files = [file for file in os.listdir(model_name_or_path)]
         
-        # if 'adapter_config.json' not in files:
-        model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
-                                                    return_dict=True, 
-                                                    device_map="auto",
-                                                    output_hidden_states=True
-                                                    )
-        tokenizer = AutoTokenizer.from_pretrained(model_name_or_path,
-                                                    use_fast=False,
-                                                    padding_side='left',
-                                                    )
+        # We collected lora models in Llama family.
+        lora_models = [
+            '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-8bit-Instruct-sql-v3', 
+            '/mnt/data/hf_models/llama-3.1-8b-instruct/llama3-8b-sft-qlora-re', 
+            '/mnt/data/hf_models/llama-3.1-8b-instruct/prm800k_llama_lora', 
+            '/mnt/data/hf_models/llama-3.1-8b-instruct/llama-3_1-8b-instruct-fake-news', 
+        ]
+        if model_name_or_path not in lora_models:
+            model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
+                                                        return_dict=True, 
+                                                        device_map="auto",
+                                                        output_hidden_states=True
+                                                        )
+            tokenizer = AutoTokenizer.from_pretrained(model_name_or_path,
+                                                        use_fast=False,
+                                                        padding_side='left',
+                                                        )
         # Load the Lora fine-tuning version of the model.
-        # else:
-        #     config = PeftConfig.from_pretrained(model_name_or_path)
-        #     model = AutoModelForCausalLM.from_pretrained(config.base_model_name_or_path, 
-        #                                                 return_dict=True, 
-        #                                                 device_map="auto",
-        #                                                 output_hidden_states=True,
-        #                                                 )
-        #     model = PeftModel.from_pretrained(model, model_name_or_path, 
-        #                                                 return_dict=True, 
-        #                                                 device_map="auto",
-        #                                                 output_hidden_states=True,
-        #                                                 torch_dtype=torch.bfloat16,
-        #                                                 quantizaiton_config=bnb_config
-        #                                                 )
-        #     tokenizer = AutoTokenizer.from_pretrained(config.base_model_name_or_path)
+        else:
+            base_model = AutoModelForCausalLM.from_pretrained(
+                '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct', 
+                return_dict=True, 
+                device_map='auto', 
+                output_hidden_states=True, 
+            )
+            model = PeftModel.from_pretrained(
+                base_model, 
+                model_name_or_path, 
+            )
+            
+            tokenizer = AutoTokenizer.from_pretrained(
+                '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct', 
+                use_fast=False, 
+                padding_side='left', 
+            )
+            
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
 
         print("Model loaded successfully.")
+        
         return model, tokenizer
 
     except Exception as e:

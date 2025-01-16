@@ -1,39 +1,20 @@
-# This is model list for our pre-experiments.
-# MODEL_LIST = [
-#               "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B/",
-#               "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama3-ft",
-#               "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3-8B-Instruct/",
-#               "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama3-instruct-ft",
-#               "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B/",
-#               "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama31-ft",
-#               "/mnt/data/yuliangyan/meta-llama/Meta-Llama-3.1-8B-Instruct/",
-#               "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/llama3-instruct-ft",
-#               "/mnt/data/yuliangyan/mistralai/Mistral-7B-v0.1/",
-#               "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/mistral-ft",
-#               "/mnt/data/yuliangyan/deepseek-ai/deepseek-llm-7b-base/",
-#               "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/deepseek-ft",
-#               "/mnt/data/yuliangyan/deepseek-ai/deepseek-llm-7b-chat/",
-#               "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/deepseek-chat-ft",
-#               "/mnt/data/yuliangyan/deepseek-ai/deepseek-math-7b-instruct/",
-#               "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/deepseek-math-instruct-ft",
-#               "/mnt/data/yuliangyan/Qwen/Qwen2.5-7B/",
-#               "/home/yuliangyan/Code/llm-fingerprinting/instruction_tuning_models/qwen25-ft",
-#               ]
-
 # Model list for training the fingerprint extractor.
 MODEL_LIST_TRAIN = [
-  # Llama 3.1 Family.
+  # Llama 3.1 Family. 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct', 
-  '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-8B-UltraMedical', # work
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/llama-3_1-8b-instruct-fake-news',
+  # '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-8B-UltraMedical', # BUG
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Unsloth-Meta-Llama-3.1-8B-Instruct', # work
   '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-SuperNova-Lite', 
-  '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-ARC-Potpourri-Induction-8B', 
+  # '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-ARC-Potpourri-Induction-8B', # BUG
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-8bit-Instruct-sql-v3', 
   # '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-3.1-8B-Instruct-FP8', # BUG
   '/mnt/data/hf_models/llama-3.1-8b-instruct/GPM-Llama-3.1-8B-Instruct', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/llama_3.1_8b_prop_logic_ft', 
   '/mnt/data/hf_models/llama-3.1-8b-instruct/llama-3.1-8b-instruct-ultrafeedback-single-judge', 
-  '/mnt/data/hf_models/llama-3.1-8b-instruct/Skywork', 
-  '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-GPTQ-Q_8', 
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/prm800k_llama_lora', 
+  # '/mnt/data/hf_models/llama-3.1-8b-instruct/Skywork', # BUG
+  '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct-GPTQ-Q_8',
   # Qwen2.5 Family.
   '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen2.5-7B-Instruct', 
   '/mnt/data/hf_models/qwen-2.5-7b-instruct/Qwen-UMLS-7B-Instruct', 
