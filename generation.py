@@ -61,7 +61,7 @@ def generation(model_name_or_path: str,
         # "top_k":3,
         # "top_p":0.9,
         # "temperature": temperature,
-        "repetition_penalty":1.4,
+        # "repetition_penalty":1.4,
         "pad_token_id":tokenizer.eos_token_id,
     }
     

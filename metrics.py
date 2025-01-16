@@ -119,8 +119,13 @@ def s_index(
     model_number_per_family: int, 
     y_score, 
 ):
-
-    intra_distance = 1 / ((np.sum(y_score[start: start + model_number_per_family]) - y_score[current_index]) / (model_number_per_family - 1))
-    inter_distance = 1 / ((np.sum(y_score) - np.sum(y_score[start: start + model_number_per_family])) / (len(y_score) - model_number_per_family))
-    
+    if current_index == start:
+        # Current model is base model.
+        intra_distance = 1 / ((np.sum(y_score[start: start + model_number_per_family]) - y_score[current_index]) / (model_number_per_family - 1))
+        inter_distance = 1 / ((np.sum(y_score) - np.sum(y_score[start: start + model_number_per_family])) / (len(y_score) - model_number_per_family))
+    else:
+        # Only use the (suspect, base) as the positive pair.
+        intra_distance = 1 / y_score[current_index]
+        inter_distance = 1 / ((np.sum(y_score) - np.sum(y_score[start: start + model_number_per_family])) / (len(y_score) - model_number_per_family))
+        
     return inter_distance / intra_distance

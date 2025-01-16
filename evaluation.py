@@ -135,12 +135,13 @@ def evaluate_cl(
     llama_labels[start: start + model_number_per_family] = 1
     print(f"Llama family labels: {llama_labels}")
     
+    llama_pred_base = mean_simlarity_matrix.detach().numpy()[start,:]
     for i in range(start, start + model_number_per_family):
         # Obtain the i-th (suspect model) row of the simlarity matrix
         llama_pred = mean_simlarity_matrix.detach().numpy()[i,:]
         # Ignore suspect model itself. 
         llama_roc = roc_auc_score(y_true=np.delete(llama_labels, i), y_score=np.delete(llama_pred, i))
-        llama_s_index = s_index(current_index=i, start=start, model_number_per_family=model_number_per_family, y_score=llama_pred)
+        llama_s_index = s_index(current_index=i, start=start, model_number_per_family=model_number_per_family, y_score=llama_pred_base)  
         llama_db_index = davies_bouldin_score(llama_pred.reshape(-1, 1), llama_labels)
         llama_silhouette_score = silhouette_score(llama_pred.reshape(-1, 1), llama_labels)
         current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
@@ -158,10 +159,11 @@ def evaluate_cl(
     qwen_labels[start: start + model_number_per_family] = 1
     print(f"Qwen family labels: {qwen_labels}")
     
+    qwen_pred_base = mean_simlarity_matrix.detach().numpy()[start,:]
     for i in range(start, start + model_number_per_family):
         qwen_pred = mean_simlarity_matrix.detach().numpy()[i,:]
         qwen_roc = roc_auc_score(y_true=np.delete(qwen_labels, i), y_score=np.delete(qwen_pred, i))
-        qwen_s_index = s_index(current_index=i, start=start, model_number_per_family=model_number_per_family, y_score=qwen_pred)
+        qwen_s_index = s_index(current_index=i, start=start, model_number_per_family=model_number_per_family, y_score=qwen_pred_base)
         qwen_db_index = davies_bouldin_score(qwen_pred.reshape(-1, 1), qwen_labels)
         qwen_silhouette_score = silhouette_score(qwen_pred.reshape(-1, 1), qwen_labels)
         current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
@@ -179,10 +181,11 @@ def evaluate_cl(
     mistral_labels[start: start + model_number_per_family] = 1
     print(f"Mistral family labels: {mistral_labels}")
     
+    mistral_pred_base = mean_simlarity_matrix.detach().numpy()[start,:]
     for i in range(start, start + model_number_per_family):
         mistral_pred = mean_simlarity_matrix.detach().numpy()[i,:]
         mistral_roc = roc_auc_score(y_true=np.delete(mistral_labels, i), y_score=np.delete(mistral_pred, i))
-        mistral_s_index = s_index(current_index=i, start=start, model_number_per_family=model_number_per_family, y_score=mistral_pred)
+        mistral_s_index = s_index(current_index=i, start=start, model_number_per_family=model_number_per_family, y_score=mistral_pred_base)
         mistral_silhouette_score = silhouette_score(mistral_pred.reshape(-1, 1), mistral_labels)
         mistral_db_index = davies_bouldin_score(mistral_pred.reshape(-1, 1), mistral_labels)
         current_model = model_list[i][model_list[i].rfind('/') + 1 : ]
