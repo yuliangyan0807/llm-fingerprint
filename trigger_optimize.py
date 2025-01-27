@@ -6,7 +6,7 @@ from tqdm import tqdm
 from typing import List
 from utils import *
 from datasets import load_from_disk, Dataset
-from transformers import T5EncoderModel
+from transformers import T5EncoderModel, AutoTokenizer, set_seed
 import warnings
 from transformers import set_seed
 
@@ -63,10 +63,9 @@ def optimize_triggers(
     trajectory_set, 
     model_list: List[str], 
     family_name: str, 
-    tokenizer, 
     model_path: str, 
     fold: int, 
-    threshold: int, 
+    threshold: int=3, 
 ) -> Dataset:
     """
     Finds M optimized prompts from trigger_set by maximizing intra-model similarity and inter-model divergence with pair sampling.
@@ -88,6 +87,7 @@ def optimize_triggers(
     assert prompt_number == 600, "error!"
     
     print(f"Loading the extractor...")
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = T5EncoderModel.from_pretrained(
         model_path, 
         output_hidden_states=True,
@@ -102,13 +102,16 @@ def optimize_triggers(
     )
     
     # Specify the target family. 
-    model_number_per_family = len(trajectory_set) // 3
+    model_number_per_family = len(model_list_train) // 3
     if family_name == 'llama':
         target_index = 0
+        negative_indice = [7, 14]
     elif family_name == 'qwen':
         target_index = 7
+        negative_indice = [0, 14]
     else:
         target_index = 14
+        negative_indice = [0, 7]
     
     ideal_value = model_number_per_family - 1
         
@@ -123,7 +126,7 @@ def optimize_triggers(
     optimized_trigger_set = []    
     # iterate each prompt
     print(f"Start to search...")
-    for i, sample in enumerate(contrastive_dataset):
+    for i, sample in tqdm(enumerate(contrastive_dataset)):
         batch_input_ids = sample['input_ids']
         batch_attention_mask = sample['attention_mask']
         inputs = {
@@ -136,11 +139,14 @@ def optimize_triggers(
         simlarity_marix = torch.matmul(aggregated_hidden_states, aggregated_hidden_states.T)
         # simlarity_marices.append(simlarity_marix)
         
-        target_logits = torch.argmax(simlarity_marix[target_index + 1: target_index + model_number_per_family, :], dim=1)
+        # target_logits = torch.argmax(simlarity_marix[target_index + 1: target_index + model_number_per_family, :], dim=1)
+        target_logits = simlarity_marix.detach().numpy()[target_index, :]
+        min_val = np.min(target_logits[target_index + 1 : target_index + model_number_per_family])
         # Count the number of the suspect models has the most similary with the victim model. 
-        val = torch.sum(target_logits == target_index).item()
-        if val >= threshold:
-            optimized_trigger_set.append(i)
+        # val = torch.sum(target_logits == target_index).item()
+        max_val = np.max(target_logits[negative_indice])
+        if min_val >= max_val:
+            optimized_trigger_set.append(original_trigger_set[i]['prompt'])
             print(original_trigger_set[i])
     
     dataset = {
@@ -156,21 +162,26 @@ if __name__ == '__main__':
     warnings.filterwarnings('ignore')
     
     # model_list = MODEL_LIST_TRAIN
-    model_list = MODEL_LIST_UNSEEN
+    # model_list = MODEL_LIST_UNSEEN
+    set_seed(42)
 
     # Find optimized prompts
-    # optimized_prompts = optimize_prompts_with_pair_sampling(
-    #                                                     model_list=model_list, 
-    #                                                     M=64, 
-    #                                                     sample_size=200, 
-    #                                                     alpha=0.3, 
-    #                                                     beta=0.7,
-    #                                                     )
+    model_path = './metric_learning_models/0118_fold_2'
+    
+    trajectory_set = load_from_disk('./data/trajectory_set')
+    
+    optimized_prompts = optimize_triggers(
+        trajectory_set=trajectory_set, 
+        model_list=MODEL_LIST_TRAIN, 
+        family_name='llama', 
+        model_path=model_path, 
+        fold=2, 
+    )
     
     # data = load_from_disk('./data/seed_trigger_set')
     # print(len(data))
     
     # Collect the trajectories of the models.
-    pre_generate_trajectory(model_list=model_list,
-                            batch_size=50
-                            )
+    # pre_generate_trajectory(model_list=model_list,
+    #                         batch_size=50
+    #                         )

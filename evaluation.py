@@ -14,65 +14,6 @@ from generation import *
 from model_list import *
 
 @torch.no_grad()
-def evaluate(
-    trigger_set,
-    model_list: List[str],
-):
-    pass
-    # batch_size = len(trigger_set)
-    num_models = len(model_list)
-    prompts = trigger_set['prompt']
-    model_tokens, model_token_probs, model_mean_entropy = [], [], []
-    # Record the fingerprint towards the trigger set.
-    for i in range(len(model_list)):
-        model, tokenizer = load_hf_model(model_name_or_path=model_list[i])
-        batch_tokens, token_probs, decoded_output, entropy, mean_entropy = batch_generation(
-            model=model,
-            tokenizer=tokenizer,
-            prompt=prompts,
-        )
-        model_tokens.append(batch_tokens)
-        model_token_probs.append(token_probs)
-        model_mean_entropy.append(mean_entropy)
-        assert len(model_tokens) == len(model_token_probs), "length error!"
-    
-    edit_distance_matrix = np.zeros((num_models, num_models))
-    jaccard_simlarity_matrix = np.zeros((num_models, num_models))
-    entropy_simlarity_matrix = np.zeros((num_models, num_models))
-    
-    for i, j in tqdm(combinations(range(len(model_list)), r=2)):
-        batch_tokens1 = model_tokens[i] # (batch_size, seq_length)
-        batch_tokens2 = model_tokens[j]
-        batch_mean_entropy1, batch_mean_entropy2 = model_mean_entropy[i], model_mean_entropy[j]
-        batch_token_probs1, batch_token_probs2 = model_token_probs[i], model_token_probs[j]
-        assert len(batch_tokens1) == len(batch_tokens2), "length error!"
-        
-        edit_distacne, jaccard_similarity, entropy_simlarity  = [], [], []
-        # compute mean jaccard similarity
-        for k in range(len(batch_tokens1)):
-            tokens1, tokens2 = batch_tokens1[k], batch_tokens2[k]
-            mean_entropy1, mean_entropy2 = batch_mean_entropy1[k], batch_mean_entropy2[k]
-            token_probs1, token_probs2 = batch_token_probs1[k], batch_token_probs2[k]
-            assert len(tokens1) == len(token_probs1), "length error!"
-            
-            edit_distacne.append(weighted_edit_distance(tokens1, tokens2, token_probs1, token_probs2))
-            jaccard_similarity.append(compute_jaccard_similarity(tokens1, tokens2))
-            entropy_simlarity.append(abs(mean_entropy1 - mean_entropy2))
-        
-        # Compute the mean value of each fingerprint.
-        l = len(batch_tokens1)
-        v1, v2, v3 = sum(edit_distacne) / l, sum(jaccard_similarity) / l, sum(entropy_simlarity) / l
-        edit_distance_matrix[i][j], jaccard_simlarity_matrix[i][j], entropy_simlarity_matrix[i][j] = v1, v2, v3
-        edit_distance_matrix[j][i], jaccard_simlarity_matrix[j][i], entropy_simlarity_matrix[j][i] = v1, v2, v3
-    
-    res = {'edit_distance_matrix' : edit_distance_matrix,
-           'jaccard_simlarity_matrix' : jaccard_simlarity_matrix,
-           'entropy_simlarity_matrix' : entropy_simlarity_matrix,
-           }
-    
-    return res
-
-@torch.no_grad()
 def evaluate_cl(
     model_list,
     contrastive_set,
@@ -105,15 +46,23 @@ def evaluate_cl(
         simlarity_marices.append(simlarity_marix)
     
     # Compute the success rate.
+    print(f"Computing the success rate...")
     number = len(simlarity_marices)
-    # Only compute the success rate of the suspect models.
-    sr = np.array([0 for i in range(number)])
-    labels = [0, 0, 0, 0, 4, 4, 4, 4, 8, 8, 8, 8]
-    for i in range(number):
-        logits = np.array(simlarity_marices[i])
-        preds = np.argmax(logits, axis=1)
-        mask = np.where(preds == labels)
-        sr[mask] += 1
+    sr = np.zeros((len(model_list), ), dtype=int)
+    for matrix in simlarity_marices:
+        logits = matrix.detach().numpy()
+        # llama family.
+        for i in range(1, 4):
+            if logits[i, 0] >= max(logits[i, 4], logits[i, 8]):
+                sr[i] += 1
+        # qwen family. 
+        for i in range(5, 8):
+            if logits[i, 4] >= max(logits[i, 0], logits[i, 8]):
+                sr[i] += 1
+        # mistral family. 
+        for i in range(9, 11):
+            if logits[i, 8] >= max(logits[i, 0], logits[i, 4]):
+                sr[i] += 1
     sr = sr / number
     
     simlarity_marices = torch.stack(simlarity_marices, dim=0)
@@ -148,6 +97,7 @@ def evaluate_cl(
         print(f"Suspect Model is {current_model}.")
         print(f"Extractor predict on current: {llama_pred}")
         print(f"Roc-auc score of the current: {llama_roc}")
+        print(f"Success rate of the current: {sr[i] * 100}%")
         print(f"S-Index of the current: {llama_s_index}")
         print(f"Silhouette Score of the current: {llama_silhouette_score}")
         print(f"Davies-Bouldin Index of the current: {llama_db_index}")
@@ -170,6 +120,7 @@ def evaluate_cl(
         print(f"Suspect Model is {current_model}.")
         print(f"Extractor predict on current: {qwen_pred}")
         print(f"Roc-auc score of the current: {qwen_roc}")
+        print(f"Success rate of the current: {sr[i] * 100}%")
         print(f"S-Index of the current: {qwen_s_index}")
         print(f"Silhouette Score of the current: {qwen_silhouette_score}")
         print(f"Davies-Bouldin Index of the current: {qwen_db_index}")
@@ -192,6 +143,7 @@ def evaluate_cl(
         print(f"Suspect Model is {current_model}.")
         print(f"Extractor predict on current: {mistral_pred}")
         print(f"Roc-auc score of the current: {mistral_roc}")
+        print(f"Success rate of the current: {sr[i] * 100}%")
         print(f"S-Index score of the current: {mistral_s_index}")
         print(f"Silhouette Score of the current: {mistral_silhouette_score}")
         print(f"Davies-Bouldin Index of the current: {mistral_db_index}")
@@ -272,11 +224,16 @@ def evaluate_cl_unseen(
 def cross_fold_evaluation(
     model_path, 
     fold: int, 
+    optimized_set: None, 
 ):
-    raw_data = load_from_disk('./data/trajectory_set_train')
+    trajectory_set = load_from_disk('./data/trajectory_set')
+    # Utilize the optimized triggers. 
+    if optimized_set:
+        indices = optimized_set['prompt_index']
+        trajectory_set = trajectory_set.select(indices=indices)
     
     res, model_list_train, model_list_eval = get_cross_validation_datasets(
-        trajectory_set=raw_data,
+        trajectory_set=trajectory_set,
         model_list=MODEL_LIST_TRAIN,
         fold=fold
     )
@@ -319,12 +276,12 @@ if __name__ == '__main__':
     # model_path = './metric_learning_models/1229_0' # 72 0.1 good
     # model_path = './metric_learning_models/1229_1' # 72 0.07 very good
     # model_path = './metric_learning_models/1229_2' # 48 0.07 
-    model_path = './metric_learning_models/0115_2_fold_2_fold_2'
+    model_path = './metric_learning_models/0118_0'
     
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     
     # evaluation on the train models.
-    raw_data = load_from_disk('./data/trajectory_set_train')
+    # raw_data = load_from_disk('./data/trajectory_set')
     cross_fold_evaluation(
         model_path=model_path, 
         fold=2, 

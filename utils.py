@@ -52,6 +52,7 @@ def load_hf_model(model_name_or_path,
             '/mnt/data/hf_models/llama-3.1-8b-instruct/llama3-8b-sft-qlora-re', 
             '/mnt/data/hf_models/llama-3.1-8b-instruct/prm800k_llama_lora', 
             '/mnt/data/hf_models/llama-3.1-8b-instruct/llama-3_1-8b-instruct-fake-news', 
+            '/mnt/data/hf_models/llama-3.1-8b-instruct/task-1-meta-llama-Meta-Llama-3.1-8B-Instruct-1736201342', 
         ]
         if model_name_or_path not in lora_models:
             model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
