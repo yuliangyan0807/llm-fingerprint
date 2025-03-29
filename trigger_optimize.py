@@ -57,7 +57,7 @@ def pre_generate_trajectory(
                             #  "labels": labels
                              }
     optimized_trigger_set = Dataset.from_dict(optimized_trigger_set)
-    optimized_trigger_set.save_to_disk('./data/trajectory_set_unseen')
+    optimized_trigger_set.save_to_disk('./data/trajectory_set_large')
 
 def optimize_triggers(
     trajectory_set, 
@@ -102,6 +102,7 @@ def optimize_triggers(
     )
     
     # Specify the target family. 
+    # [0, 1, 2, 3, 4, 5, 6|7, 8, 9, 10, 11, 12, 13|14]
     model_number_per_family = len(model_list_train) // 3
     if family_name == 'llama':
         target_index = 0
@@ -112,8 +113,6 @@ def optimize_triggers(
     else:
         target_index = 14
         negative_indice = [0, 7]
-    
-    ideal_value = model_number_per_family - 1
         
     contrastive_dataset = construct_contrastive_dataset(
         tokenizer=tokenizer, 
@@ -134,7 +133,7 @@ def optimize_triggers(
             'attention_mask' : torch.tensor(batch_attention_mask),
         }
         last_hidden_states = model(**inputs).last_hidden_state
-        aggregated_hidden_states = torch.sum(last_hidden_states, dim=-1)
+        aggregated_hidden_states = torch.sum(last_hidden_states, dim=1)
         aggregated_hidden_states = F.normalize(aggregated_hidden_states, dim=-1)
         simlarity_marix = torch.matmul(aggregated_hidden_states, aggregated_hidden_states.T)
         # simlarity_marices.append(simlarity_marix)
@@ -146,7 +145,7 @@ def optimize_triggers(
         # val = torch.sum(target_logits == target_index).item()
         max_val = np.max(target_logits[negative_indice])
         if min_val >= max_val:
-            optimized_trigger_set.append(original_trigger_set[i]['prompt'])
+            optimized_trigger_set.append(i)
             print(original_trigger_set[i])
     
     dataset = {
@@ -161,27 +160,29 @@ def optimize_triggers(
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
     
-    # model_list = MODEL_LIST_TRAIN
+    model_list = MODEL_LIST_TRAIN
     # model_list = MODEL_LIST_UNSEEN
     set_seed(42)
 
     # Find optimized prompts
-    model_path = './metric_learning_models/0118_fold_2'
+    # model_path = './metric_learning_models/0206_fold_0'
     
-    trajectory_set = load_from_disk('./data/trajectory_set')
+    # trajectory_set = load_from_disk('./data/trajectory_set')
     
-    optimized_prompts = optimize_triggers(
-        trajectory_set=trajectory_set, 
-        model_list=MODEL_LIST_TRAIN, 
-        family_name='llama', 
-        model_path=model_path, 
-        fold=2, 
-    )
+    # familiy_names = ['llama', 'qwen', 'mistral']
+    # for family_name in familiy_names:
+    #     optimized_prompts = optimize_triggers(
+    #         trajectory_set=trajectory_set, 
+    #         model_list=MODEL_LIST_TRAIN, 
+    #         family_name=family_name, 
+    #         model_path=model_path, 
+    #         fold=0, 
+    #     )
     
-    # data = load_from_disk('./data/seed_trigger_set')
-    # print(len(data))
+    data = load_from_disk('./data/seed_trigger_set')
+    print(len(data))
     
     # Collect the trajectories of the models.
-    # pre_generate_trajectory(model_list=model_list,
-    #                         batch_size=50
-    #                         )
+    pre_generate_trajectory(model_list=model_list,
+                            batch_size=2
+                            )
