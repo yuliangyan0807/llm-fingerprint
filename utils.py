@@ -1,7 +1,7 @@
 import torch
 import transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from peft import PeftModel, PeftConfig
+from peft import PeftModel
 import os
 from datasets import Dataset, load_from_disk
 from typing import Sequence, Dict, List
@@ -10,7 +10,7 @@ from torch.utils.data import Dataset as ds
 from dataclasses import dataclass
 
 from model_list import *
-
+from generation import batch_generation
 
 def load_hf_model(model_name_or_path, 
                   training_mode=False,
@@ -114,6 +114,56 @@ def load_hf_model(model_name_or_path,
     except Exception as e:
         print(f"Error loading model: {e}")
         return None, None
+
+def pre_generate_trajectory(
+    model_list: List[str],
+    batch_size: int=50,
+    max_new_tokens: int=64,
+    save_dir: str="",
+):
+    """
+    Given the trigger set, pre generate the trajectory of the models in the model lists.
+    Tajectory include tokens, token_probs, entropy, and so on.
+    """
+    print(f"loading dataset...")
+    seed_trigger_set = load_from_disk('./data/seed_trigger_set')
+    print(f"{len(seed_trigger_set)} data in total")
+    prompts = seed_trigger_set['prompt']
+    
+    assert len(seed_trigger_set) % batch_size == 0, "choose another batch size!"
+    
+    tokens_, token_probs_, decode_output_, entropy_, mean_entropy_, labels = [], [], [], [], [], []
+    
+    # Iterate the model list
+    for label, model_name_or_path in enumerate(model_list):
+        # load the model
+        model, tokenizer = load_hf_model(model_name_or_path)
+        # iterate the prompt
+        for i in tqdm(range(0, len(seed_trigger_set), batch_size)):
+            batch_prompt = prompts[i : i + batch_size]
+            tokens, token_probs, decode_output, entropy, mean_entropy = batch_generation(
+                model=model,
+                tokenizer=tokenizer,
+                prompt=batch_prompt,
+                max_new_tokens=max_new_tokens
+            )
+            tokens_ = tokens_ + tokens
+            token_probs_ = token_probs_ + token_probs
+            decode_output_ = decode_output_ + decode_output
+            entropy_ = entropy_ + entropy
+            mean_entropy_ = mean_entropy_ + mean_entropy
+    
+    print(f"saving dataset...")
+    optimized_trigger_set = {"tokens": tokens_,
+                             "token_probs": token_probs_,
+                             "decode_output": decode_output_,
+                             "entropy": entropy_,
+                             "mean_entropy": mean_entropy_,
+                            #  "labels": labels
+                             }
+    optimized_trigger_set = Dataset.from_dict(optimized_trigger_set)
+    # optimized_trigger_set.save_to_disk('./data/trajectory_set_large')
+    optimized_trigger_set.save_to_disk(save_dir)
 
 def construct_contrastive_dataset(
     tokenizer: transformers.PreTrainedTokenizer,
@@ -329,7 +379,9 @@ def get_cross_validation_datasets(
          
         
 if __name__ == '__main__':
-    # data = load_from_disk('./data/trajectory_set')
-    # print(data[360])
+    # Generate the trajectory set.
+    pre_generate_trajectory(model_list=MODEL_LIST_TRAIN, save_dir="./data/trajectory_set")
+    
+    # Construct the dataset for training the Trigger-DuFFin.
     tokenizer = AutoTokenizer.from_pretrained('google-t5/t5-base')
     construct_contrastive_dataset(tokenizer=tokenizer)

@@ -29,6 +29,8 @@ class TrainingArguments(transformers.TrainingArguments):
     report_to: str = field(default="wandb")
     run_name: str = field(default='llm-fingerprint-1109')
     fold: int = field(default=0)
+    seed: int = field(default=42)
+    sample_size: int = field(default=0)
     max_grad_norm: str = field(default=1.0)
     cache_dir: Optional[str] = field(default=None)
     optim: str = field(
@@ -114,7 +116,7 @@ class ContrastiveTrainer(transformers.Trainer):
 
 def train():
     
-    set_seed(42)
+    # set_seed(42)
 
     os.environ["WANDB_PROJECT"]="llm-fingerprint"
     
@@ -123,13 +125,17 @@ def train():
     )
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
     
+    set_seed(training_args.seed)
+    
     model = T5EncoderModel.from_pretrained(model_args.model_name_or_path, output_hidden_states=True)
     # Some bugs about the T5 model.
     model.floating_point_ops = lambda s: 0
     
     tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path)
     
-    raw_data = load_from_disk('./data/trajectory_set_train')
+    raw_data = load_from_disk('./data/trajectory_set')
+    # raw_data = load_from_disk('./data/trajectory_set_modified')
+    
     
     fold = training_args.fold
     res, model_list_train, model_list_eval = get_cross_validation_datasets(
@@ -141,7 +147,8 @@ def train():
     
     contrastive_dataset = ContrastiveDataset(construct_contrastive_dataset(tokenizer=tokenizer,
                                                                            raw_data=train_set,
-                                                                           model_list=model_list_train))
+                                                                           model_list=model_list_train,
+                                                                           sample_size=training_args.sample_size))
     data_collator = DataCollatorForContrastiveDataset(tokenizer=tokenizer)
     
     train_dataset = contrastive_dataset
@@ -166,6 +173,7 @@ def train():
             tokenizer=tokenizer,
             raw_data=eval_set,
             model_list=model_list_eval,
+            # sample_size=training_args.sample_size
         )
     )
     evaluate_cl(
