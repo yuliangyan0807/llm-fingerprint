@@ -53,6 +53,7 @@ def load_hf_model(model_name_or_path,
             '/mnt/data/hf_models/llama-3.1-8b-instruct/prm800k_llama_lora', 
             '/mnt/data/hf_models/llama-3.1-8b-instruct/llama-3_1-8b-instruct-fake-news', 
             '/mnt/data/hf_models/llama-3.1-8b-instruct/task-1-meta-llama-Meta-Llama-3.1-8B-Instruct-1736201342', 
+            # '/mnt/data/hf_models/llama-3.1-8b-instruct/llama-2-13b-orca',
         ]
         if model_name_or_path not in lora_models:
             model = AutoModelForCausalLM.from_pretrained(model_name_or_path, 
@@ -65,6 +66,26 @@ def load_hf_model(model_name_or_path,
                                                         padding_side='left',
                                                         )
         # Load the Lora fine-tuning version of the model.
+        elif model_name_or_path == '/mnt/data/hf_models/llama-3.1-8b-instruct/llama-2-13b-orca':
+            
+            base_model = AutoModelForCausalLM.from_pretrained(
+                '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-2-13b-chat-hf', 
+                return_dict=True, 
+                device_map='auto', 
+                output_hidden_states=True, 
+            )
+            # model = PeftModel.from_pretrained(
+            #     base_model, 
+            #     model_name_or_path, 
+            # )
+            base_model.load_adapter(model_name_or_path)
+            
+            tokenizer = AutoTokenizer.from_pretrained(
+                '/mnt/data/hf_models/llama-3.1-8b-instruct/Llama-2-13b-chat-hf', 
+                use_fast=False, 
+                padding_side='left', 
+            )
+            
         else:
             base_model = AutoModelForCausalLM.from_pretrained(
                 '/mnt/data/hf_models/llama-3.1-8b-instruct/Meta-Llama-3.1-8B-Instruct', 
@@ -100,6 +121,8 @@ def construct_contrastive_dataset(
     model_list,
     select_trigger: bool=False, 
     save: bool=False, 
+    sample_size: int=0,
+    include_entropy: bool=True
     ):
     """
     Constructs contrastive learning samples for each data point.
@@ -128,8 +151,11 @@ def construct_contrastive_dataset(
         return str(round(example, 2))
     
     # template = "Prompt: {}<SEP>Output: {}<SEP>Mean Entropy: {}.<SEP>Token Probs: {}."
-    # template = "Prompt: {}<SEP>Output: {}<SEP>Mean Entropy: {}."
-    template = "Output: {} <SEP> Mean Entropy: {}."
+    if include_entropy:
+        template = "Prompt: {}<SEP>Output: {}<SEP>Mean Entropy: {}."
+    else:
+        template = "Output: {}"
+        # template = "Output: {} <SEP> Mean Entropy: {}." 
     contrastive_dataset = []
     print(f"Contructing the dataset for contrastive learning...")
     for i in tqdm(range(len(raw_data))):
@@ -157,7 +183,9 @@ def construct_contrastive_dataset(
     assert len(input_ids) == len(raw_data), "length error!"
     
     tokenized_contrastive_dataset= []
-    attention_masks = []    
+    attention_masks = []
+    if sample_size != 0:
+        prompt_number = sample_size    
     for i in range(prompt_number):
         samples = []
         attn = []
@@ -227,12 +255,12 @@ def get_cross_validation_datasets(
 ):
     res = {}
     prompt_number = len(trajectory_set) // len(model_list)
-    assert prompt_number == 600, "error!"
+    # assert prompt_number == 600, "error!"
     
     # 3-fold cross-validation
     if fold == 0:
         trajectory_set_train = trajectory_set.select(
-            list(range(0, 600)) +
+            list(range(0, 1 * prompt_number)) +
             list(range(4 * prompt_number, 10 * prompt_number)) +
             list(range(10 * prompt_number, 11 * prompt_number)) + 
             list(range(14 * prompt_number, 20 * prompt_number)) + 
