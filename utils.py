@@ -294,7 +294,7 @@ def construct_contrastive_dataset(
     
     # template = "Prompt: {}<SEP>Output: {}<SEP>Mean Entropy: {}.<SEP>Token Probs: {}."
     if include_entropy:
-        template = "Prompt: {}<SEP>Output: {}<SEP>Mean Entropy: {}."
+        template = "Output: {}<SEP>Mean Entropy: {}."
     else:
         template = "Output: {}"
         # template = "Output: {} <SEP> Mean Entropy: {}." 

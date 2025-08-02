@@ -133,8 +133,8 @@ def train():
     
     tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path)
     
-    raw_data = load_from_disk('./data/trajectory_set')
-    # raw_data = load_from_disk('./data/trajectory_set_modified')
+    # raw_data = load_from_disk('./data/trajectory_set')
+    raw_data = load_from_disk(data_args.data_path)
     
     
     fold = training_args.fold

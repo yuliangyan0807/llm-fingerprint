@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score, davies_bouldin_score, silhouette_score
 
 from metrics import *
-from generation import *
+# from generation import *
 from model_list import *
 
 @torch.no_grad()
@@ -39,7 +39,7 @@ def evaluate_cl(
             'attention_mask' : torch.tensor(batch_attention_mask),
         }
         last_hidden_states = model(**inputs).last_hidden_state # (18, seq_length, hidden_states)
-        aggregated_hidden_states = torch.sum(last_hidden_states, dim=-1) # (18, hidden_states)
+        aggregated_hidden_states = torch.sum(last_hidden_states, dim=1) # (18, hidden_states)
         # aggregated_hidden_states = torch.squeeze(last_hidden_states[:, 0, :]) # (18, hidden_states)
         aggregated_hidden_states = F.normalize(aggregated_hidden_states, dim=-1)
         simlarity_marix = torch.matmul(aggregated_hidden_states, aggregated_hidden_states.T) # (18, 18)
@@ -53,15 +53,17 @@ def evaluate_cl(
         logits = matrix.detach().numpy()
         # llama family.
         for i in range(1, 4):
-            if logits[i, 0] >= max(logits[i, 4], logits[i, 8]):
+            # 0, 1, 2, 3, |4, 5, 6, 7, |8, 9, 10, 11
+            # (varient, positive base model) pair and the (varient, negative base model). 
+            if logits[0, i] >= max(logits[0, 4], logits[0, 8]):
                 sr[i] += 1
         # qwen family. 
         for i in range(5, 8):
-            if logits[i, 4] >= max(logits[i, 0], logits[i, 8]):
+            if logits[4, i] >= max(logits[4, 0], logits[4, 8]):
                 sr[i] += 1
         # mistral family. 
         for i in range(9, 11):
-            if logits[i, 8] >= max(logits[i, 0], logits[i, 4]):
+            if logits[8, i] >= max(logits[8, 0], logits[8, 4]):
                 sr[i] += 1
     sr = sr / number
     
@@ -157,23 +159,23 @@ def evaluate_cl(
 
 @torch.no_grad()
 def evaluate_cl_unseen(
-    trajectory_set_train, 
+    # trajectory_set_train, 
     trajectory_set_unseen, 
     tokenizer, 
     model_name_or_path: str, 
 ):
-    # Select the base models' trajectory.
-    base_trajectory = trajectory_set_train.select(
-        list(range(0, 600)) + 
-        list(range(10 * 600, 11 * 600)) + 
-        list(range(20 * 600, 21 * 600))
-    )
+    # # Select the base models' trajectory.
+    # base_trajectory = trajectory_set_train.select(
+    #     list(range(0, 600)) + 
+    #     list(range(10 * 600, 11 * 600)) + 
+    #     list(range(20 * 600, 21 * 600))
+    # )
     
     # Construct the fianl dataset.
-    dataset = concatenate_datasets([trajectory_set_unseen, base_trajectory])
+    # dataset = concatenate_datasets(trajectory_set_unseen)
     contrastive_set = construct_contrastive_dataset(
         tokenizer=tokenizer, 
-        raw_data=dataset, 
+        raw_data=trajectory_set_unseen, 
         model_list=MODEL_LIST_UNSEEN
     )
     
@@ -209,28 +211,29 @@ def evaluate_cl_unseen(
     # print(mean_simlarity_matrix.shape)
     
     print(f"Start Evaluating...")
-    llama3_2_labels = [1, 1, 1, 1, 0, 0, 0]
-    for i in range(0, 4):
+    llama3_2_labels = [1, 1, 0, 0, 0]
+    for i in range(0, 3):
         llama3_2_pred = mean_simlarity_matrix.detach().numpy()[i,:]
-        llama3_2_auc = roc_auc_score(y_true=llama3_2_labels, y_score=llama3_2_pred)
-        llama3_2_silhouette_score = silhouette_score(llama3_2_pred.reshape(-1, 1), llama3_2_labels)
+        llama3_2_pred_ = np.delete(llama3_2_pred, i)
+        print(llama3_2_pred_)
+        llama3_2_auc = roc_auc_score(y_true=llama3_2_labels, y_score=llama3_2_pred_)
+        # llama3_2_silhouette_score = silhouette_score(llama3_2_pred.reshape(-1, 1), llama3_2_labels)
         current_model = MODEL_LIST_UNSEEN[i][MODEL_LIST_UNSEEN[i].rfind('/') + 1 : ]
         print(f"Current Model is: {current_model}")
         print(f"Extractor predict on current: {llama3_2_pred}")
         print(f"Roc-auc score of the current: {llama3_2_auc}")
-        print(f"Silhouette Score of the current: {llama3_2_silhouette_score}")
+        # print(f"Silhouette Score of the current: {llama3_2_silhouette_score}")
         print(f"#############################################")
         
 def cross_fold_evaluation(
     model_path, 
     fold: int, 
+    seed: int,
     optimized_set: None, 
 ):
     trajectory_set = load_from_disk('./data/trajectory_set')
-    # Utilize the optimized triggers. 
-    if optimized_set:
-        indices = optimized_set['prompt_index']
-        trajectory_set = trajectory_set.select(indices=indices)
+    
+    set_seed(seed=seed)
     
     res, model_list_train, model_list_eval = get_cross_validation_datasets(
         trajectory_set=trajectory_set,
@@ -239,15 +242,27 @@ def cross_fold_evaluation(
     )
     
     train_set, eval_set = res['train'], res['eval']
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
+    # tokenizer = AutoTokenizer.from_pretrained(model_path)
+    tokenizer = AutoTokenizer.from_pretrained('/mnt/data/hf_models/t5-base')
     
-    contrastive_dataset = ContrastiveDataset(
-        construct_contrastive_dataset(
+    if optimized_set:
+        indices = optimized_set['prompt_index']
+        dataset = construct_contrastive_dataset(
             tokenizer=tokenizer,
             raw_data=eval_set,
             model_list=model_list_eval,
+        ).select(indices)
+        contrastive_dataset = ContrastiveDataset(dataset)
+    else:
+        contrastive_dataset = ContrastiveDataset(
+            construct_contrastive_dataset(
+                tokenizer=tokenizer,
+                raw_data=eval_set,
+                model_list=model_list_eval,
+            )
         )
-    )
+    
+    # Utilize the optimized triggers. 
     
     evaluate_cl(
         model_list=model_list_eval,
@@ -268,29 +283,25 @@ if __name__ == '__main__':
     
     
     # evaluate cl classifier
-    # model_path = './metric_learning_models/1227_3' # good
-    # model_path = './metric_learning_models/1227_4' # good 72
-    # model_path = './metric_learning_models/1227_5' # good 32
-    # model_path = './metric_learning_models/1227_6' # good 32
-    # model_path = './metric_learning_models/1228_0' # good 48 logits not good
-    # model_path = './metric_learning_models/1229_0' # 72 0.1 good
-    # model_path = './metric_learning_models/1229_1' # 72 0.07 very good
-    # model_path = './metric_learning_models/1229_2' # 48 0.07 
-    model_path = './metric_learning_models/0118_0'
+    model_path = './metric_learning_models/0206_fold_2'
+    optimized_set = load_from_disk('./data/optimized_trigger_set_llama_0')
     
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     
     # evaluation on the train models.
-    # raw_data = load_from_disk('./data/trajectory_set')
-    cross_fold_evaluation(
-        model_path=model_path, 
-        fold=2, 
-    )
-    
-    # trajectory_set_unseen = load_from_disk('./data/trajectory_set_unseen')
-    # evaluate_cl_unseen(
-    #     trajectory_set_train=raw_data, 
-    #     trajectory_set_unseen=trajectory_set_unseen, 
-    #     tokenizer=tokenizer, 
-    #     model_name_or_path=model_path, 
+    raw_data = load_from_disk('./data/trajectory_set')
+    # cross_fold_evaluation(
+    #     model_path=model_path, 
+    #     fold=0, 
+    #     seed=42,
+    #     optimized_set=optimized_set
+    #     # optimized_set=None, 
     # )
+    
+    trajectory_set_unseen = load_from_disk('./data/trajectory_set_unseen')
+    evaluate_cl_unseen(
+        # trajectory_set_train=raw_data, 
+        trajectory_set_unseen=trajectory_set_unseen, 
+        tokenizer=tokenizer, 
+        model_name_or_path=model_path, 
+    )
