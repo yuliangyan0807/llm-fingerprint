@@ -1,5 +1,5 @@
 torchrun --nproc_per_node=4  finetuning.py \
-    --model_name_or_path "/mnt/data/yuliangyan/microsoft/Phi-3-medium-4k-instruct" \
+    --model_name_or_path "" \
     --data_path "tatsu-lab/alpaca" \
     --bf16 True \
     --output_dir "./instruction_tuning_models/phi3-instruct-ft" \
